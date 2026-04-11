@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf Tour App</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        golf: {
+                            900: '#064e3b',
+                            800: '#065f46',
+                            700: '#047857',
+                            600: '#059669',
+                            100: '#d1fae5',
+                            50: '#ecfdf5'
+                        },
+                        gold: {
+                            600: '#d97706',
+                            500: '#f59e0b',
+                            100: '#fef3c7'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { background-color: #f3f4f6; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        .slide-up { animation: slideUp 0.4s ease-out forwards; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 */
+            height: 0;
+            overflow: hidden;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- ICONS ---
+        const IconMapPin = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>;
+        const IconSunrise = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m19.07 4.93-1.41 1.41"></path><path d="M22 17v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-3"></path><path d="m7 16 5-5 5 5"></path></svg>;
+        const IconMoon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>;
+        const IconFlag = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>;
+        const IconClock = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
+        const IconInfo = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>;
+        const IconChevronLeft = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>;
+        const IconChevronRight = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>;
+        const IconMenu = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>;
+        const IconSettings = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
+
+        // --- COMPONENTS ---
+
+        const ConfigView = ({ onSave, initialId, error }) => {
+            const [inputId, setInputId] = useState(initialId || '');
+            
+            return (
+                <div className="min-h-screen flex flex-col justify-center items-center bg-golf-900 text-white p-6 fade-in">
+                    <div className="max-w-md w-full space-y-8 slide-up text-center">
+                        <div>
+                            <h1 className="text-4xl md:text-5xl font-serif font-bold tracking-wide mb-2">Connect Tour</h1>
+                            <p className="text-gold-500 font-semibold uppercase tracking-widest text-sm">Google Sheets Database</p>
+                        </div>
+                        
+                        <div className="bg-white/10 p-6 rounded-2xl border border-white/20 backdrop-blur-sm mt-8">
+                            <input 
+                                type="text" 
+                                value={inputId}
+                                onChange={(e) => setInputId(e.target.value)}
+                                placeholder="Paste Google Sheet ID here..."
+                                className="w-full bg-white/5 border border-white/30 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold-500 placeholder-white/30 mb-4"
+                            />
+                            {error && (
+                                <p className="text-red-400 text-sm mb-4">{error}</p>
+                            )}
+                            <button 
+                                onClick={() => onSave(inputId)}
+                                className="w-full bg-white text-golf-900 py-3 px-6 rounded-xl font-bold text-lg shadow-lg hover:bg-golf-50 transition transform hover:scale-105"
+                            >
+                                Sync Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const MainMenu = ({ setView, settings, clearConfig }) => (
+            <div className="min-h-screen flex flex-col justify-center items-center bg-golf-900 text-white p-6 fade-in relative">
+                <button 
+                    onClick={clearConfig}
+                    className="absolute top-6 right-6 text-golf-100/50 hover:text-white transition"
+                    title="Disconnect Database"
+                >
+                    <IconSettings />
+                </button>
+
+                <div className="max-w-md w-full space-y-8 text-center slide-up">
+                    <div>
+                        <h1 className="text-4xl md:text-5xl font-serif font-bold tracking-wide mb-2">
+                            {settings.TourName || 'Scotland & Ireland'}
+                        </h1>
+                        <p className="text-gold-500 font-semibold uppercase tracking-widest">
+                            {settings.TourYear || 'Golf Tour 2026'}
+                        </p>
+                    </div>
+                    
+                    <div className="space-y-4 pt-8">
+                        <button 
+                            onClick={() => setView('matches')}
+                            className="w-full bg-white text-golf-900 py-4 px-6 rounded-xl font-bold text-lg shadow-lg hover:bg-golf-50 transition transform hover:scale-105"
+                        >
+                            View the Golf Matches
+                        </button>
+                        <button 
+                            onClick={() => setView('itinerary')}
+                            className="w-full bg-transparent border-2 border-gold-500 text-gold-500 py-4 px-6 rounded-xl font-bold text-lg shadow-lg hover:bg-gold-500 hover:text-golf-900 transition transform hover:scale-105"
+                        >
+                            View the Itinerary
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const CopyrightFooter = () => (
+            <footer className="text-center py-6 text-slate-400 text-xs border-t border-slate-200 mt-8">
+                &copy; 2026 FAKC &bull; Flatson Ass Kicking Corp
+            </footer>
+        );
+
+        const MatchesView = ({ setView, selectedMatch, setSelectedMatch, matches }) => {
+            if (selectedMatch) {
+                const match = matches.find(m => m.id === selectedMatch);
+                if (!match) return <div className="p-4">Match not found. <button onClick={() => setSelectedMatch(null)}>Back</button></div>;
+
+                return (
+                    <div className="min-h-screen flex flex-col bg-slate-50 fade-in">
+                        <header className="bg-golf-900 text-white shadow-md p-4 flex items-center justify-between sticky top-0 z-20">
+                            <button onClick={() => setSelectedMatch(null)} className="flex items-center text-golf-100 hover:text-white">
+                                <IconChevronLeft /> <span className="ml-1 font-semibold">Matches</span>
+                            </button>
+                            <h1 className="font-serif font-bold text-lg">{match.course}</h1>
+                            <div className="w-8"></div>
+                        </header>
+
+                        <main className="flex-grow max-w-3xl w-full mx-auto p-4">
+                            <div className="text-center mb-6">
+                                <p className="text-golf-600 font-bold uppercase tracking-wider text-sm">{match.date}</p>
+                                <h2 className="text-2xl font-serif font-bold text-slate-800">{match.matchUp}</h2>
+                            </div>
+
+                            {match.video && (
+                                <div className="video-container shadow-lg">
+                                    <iframe 
+                                        src={match.video} 
+                                        title={`${match.course} Video`} 
+                                        frameBorder="0" 
+                                        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                        allowFullScreen>
+                                    </iframe>
+                                </div>
+                            )}
+
+                            <div className="space-y-4 mt-6">
+                                {match.holes && match.holes.length > 0 ? match.holes.map((hole) => (
+                                    <div key={hole.number} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                                        <div className="flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
+                                            <div className="flex items-center space-x-3">
+                                                <div className="bg-golf-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">
+                                                    {hole.number}
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-slate-800">{hole.name || `Hole ${hole.number}`}</h3>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-bold text-slate-500">Par {hole.par}</p>
+                                                <p className="text-xs text-slate-400">{hole.yardage} yds</p>
+                                            </div>
+                                        </div>
+                                        {hole.tip && (
+                                            <div className="bg-slate-50 rounded-lg p-3 text-sm text-slate-600 border border-slate-100 italic">
+                                                <span className="font-bold text-golf-700 not-italic">Caddie Tip: </span>
+                                                {hole.tip}
+                                            </div>
+                                        )}
+                                    </div>
+                                )) : (
+                                    <div className="text-center p-8 text-slate-500 bg-white rounded-xl border border-slate-200">
+                                        Hole data not yet available.
+                                    </div>
+                                )}
+                            </div>
+                        </main>
+                        <CopyrightFooter />
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen flex flex-col bg-slate-50 fade-in">
+                    <header className="bg-golf-900 text-white shadow-md p-4 flex items-center justify-between sticky top-0 z-20">
+                        <button onClick={() => setView('menu')} className="text-golf-100 hover:text-white">
+                            <IconMenu />
+                        </button>
+                        <h1 className="font-serif font-bold text-xl">The Golf Matches</h1>
+                        <div className="w-6"></div>
+                    </header>
+
+                    <main className="flex-grow max-w-3xl w-full mx-auto p-4 space-y-4 mt-4">
+                        {matches && matches.length > 0 ? matches.map((match) => (
+                            <button 
+                                key={match.id}
+                                onClick={() => setSelectedMatch(match.id)}
+                                className="w-full bg-white rounded-2xl shadow-sm border border-slate-200 p-5 text-left hover:shadow-md transition-shadow flex justify-between items-center group"
+                            >
+                                <div>
+                                    <p className="text-xs font-bold text-golf-600 uppercase tracking-widest mb-1">{match.date}</p>
+                                    <h3 className="font-serif font-bold text-xl text-slate-800">{match.course}</h3>
+                                    <p className="text-sm text-slate-500 mt-1">{match.matchUp}</p>
+                                </div>
+                                <div className="text-golf-300 group-hover:text-golf-700 transition-colors">
+                                    <IconChevronRight />
+                                </div>
+                            </button>
+                        )) : (
+                            <div className="text-center p-8 text-slate-500">No matches scheduled yet.</div>
+                        )}
+                    </main>
+                    <CopyrightFooter />
+                </div>
+            );
+        };
+
+        const ItineraryView = ({ setView, goToMatch, itinerary, settings }) => {
+            const [currentDay, setCurrentDay] = useState(0);
+            const [touchStart, setTouchStart] = useState(null);
+            const [touchEnd, setTouchEnd] = useState(null);
+
+            const minSwipeDistance = 50;
+
+            const onTouchStart = (e) => {
+                setTouchEnd(null);
+                setTouchStart(e.targetTouches[0].clientX);
+            };
+
+            const onTouchMove = (e) => {
+                setTouchEnd(e.targetTouches[0].clientX);
+            };
+
+            const onTouchEndHandler = () => {
+                if (!touchStart || !touchEnd) return;
+                const distance = touchStart - touchEnd;
+                const isLeftSwipe = distance > minSwipeDistance;
+                const isRightSwipe = distance < -minSwipeDistance;
+                
+                if (isLeftSwipe && currentDay < itinerary.length - 1) {
+                    setCurrentDay(prev => prev + 1);
+                }
+                if (isRightSwipe && currentDay > 0) {
+                    setCurrentDay(prev => prev - 1);
+                }
+            };
+
+            if (!itinerary || itinerary.length === 0) return <div className="p-8 text-center bg-slate-50 min-h-screen">Loading itinerary...</div>;
+
+            const dayData = itinerary[currentDay];
+
+            return (
+                <div className="min-h-screen flex flex-col font-sans text-slate-800 fade-in bg-slate-50">
+                    <header className="bg-golf-900 text-white shadow-md relative z-10 flex items-center p-4">
+                        <button onClick={() => setView('menu')} className="text-golf-100 hover:text-white absolute left-4">
+                            <IconMenu />
+                        </button>
+                        <div className="w-full text-center">
+                            <h1 className="text-xl md:text-2xl font-serif font-bold tracking-wide">Tour Itinerary</h1>
+                            <p className="text-golf-100 text-xs md:text-sm mt-1">{settings.TourName || 'Scotland & Ireland'}</p>
+                        </div>
+                    </header>
+
+                    {/* Date Horizontal Selector */}
+                    <div className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-20">
+                        <div className="max-w-4xl mx-auto px-2 py-3 flex overflow-x-auto hide-scrollbar snap-x snap-mandatory">
+                            {itinerary.map((d, idx) => (
+                                <button 
+                                    key={idx}
+                                    onClick={() => setCurrentDay(idx)}
+                                    className={`flex-shrink-0 snap-center mx-1 px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-200 whitespace-nowrap
+                                        ${currentDay === idx 
+                                            ? 'bg-golf-800 text-white shadow-md' 
+                                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                >
+                                    {d.date}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Main Content Area (Swipeable) */}
+                    <main 
+                        className="flex-grow max-w-4xl w-full mx-auto p-4 md:p-6 overflow-hidden"
+                        onTouchStart={onTouchStart}
+                        onTouchMove={onTouchMove}
+                        onTouchEnd={onTouchEndHandler}
+                    >
+                        <div className="flex justify-between items-center mb-6">
+                            <button 
+                                onClick={() => setCurrentDay(prev => Math.max(0, prev - 1))}
+                                className={`p-2 rounded-full ${currentDay === 0 ? 'text-slate-300' : 'text-golf-800 hover:bg-golf-50'}`}
+                                disabled={currentDay === 0}
+                            >
+                                <IconChevronLeft />
+                            </button>
+                            <div className="text-center w-full fade-in" key={`title-${currentDay}`}>
+                                <h2 className="text-xl md:text-2xl font-serif font-bold">
+                                    {dayData.day}, {dayData.date}
+                                </h2>
+                                <p className="text-xs font-bold text-gold-600 mt-1">{dayData.country}</p>
+                            </div>
+                            <button 
+                                onClick={() => setCurrentDay(prev => Math.min(itinerary.length - 1, prev + 1))}
+                                className={`p-2 rounded-full ${currentDay === itinerary.length - 1 ? 'text-slate-300' : 'text-golf-800 hover:bg-golf-50'}`}
+                                disabled={currentDay === itinerary.length - 1}
+                            >
+                                <IconChevronRight />
+                            </button>
+                        </div>
+
+                        {/* Content Grid */}
+                        <div className="space-y-6 fade-in" key={`content-${currentDay}`}>
+                            
+                            {/* Daily Quote */}
+                            {dayData.quote && (
+                                <div className="text-center px-4 py-2 border-l-4 border-gold-500 bg-white shadow-sm rounded-r-lg italic text-slate-600 text-sm">
+                                    "{dayData.quote}"
+                                </div>
+                            )}
+
+                            {/* Location & Sleep Cards */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-3">
+                                    <div className="bg-amber-100 p-2 rounded-lg text-amber-600"><IconSunrise /></div>
+                                    <div>
+                                        <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Wake Up</p>
+                                        <p className="font-bold text-slate-800">{dayData.wakeUp || '---'}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-3">
+                                    <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600"><IconMoon /></div>
+                                    <div>
+                                        <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Sleep In</p>
+                                        <p className="font-bold text-slate-800">{dayData.sleep || '---'}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Golf Section */}
+                            {dayData.golf && dayData.golf.length > 0 && (
+                                <div className="bg-golf-800 text-white rounded-2xl shadow-lg overflow-hidden">
+                                    <div className="px-5 py-4 border-b border-golf-700 bg-golf-900 flex items-center space-x-2">
+                                        <IconFlag />
+                                        <h3 className="font-serif font-bold text-lg">Golf Today</h3>
+                                    </div>
+                                    <div className="p-2">
+                                        {dayData.golf.map((g, idx) => (
+                                            <div key={idx} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-golf-700 rounded-xl p-4 m-2">
+                                                <div className="mb-2 sm:mb-0">
+                                                    <h4 className="font-bold text-lg text-golf-50">{g.course}</h4>
+                                                    
+                                                    {g.matchId ? (
+                                                        <button 
+                                                            onClick={() => goToMatch(g.matchId)}
+                                                            className="flex items-center text-gold-400 hover:text-gold-300 text-sm mt-1 space-x-1 font-semibold group"
+                                                        >
+                                                            <IconClock />
+                                                            <span className="underline group-hover:no-underline">Tee Time: {g.time} (Tap for Match Info)</span>
+                                                        </button>
+                                                    ) : (
+                                                        <div className="flex items-center text-golf-100 text-sm mt-1 space-x-1">
+                                                            <IconClock />
+                                                            <span>{g.time}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Schedule / To Do */}
+                            {dayData.schedule && dayData.schedule.length > 0 && (
+                                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                                    <h3 className="font-serif font-bold text-lg mb-4 text-golf-900 border-b pb-2">Itinerary & Activities</h3>
+                                    <div className="space-y-4">
+                                        {dayData.schedule.map((item, idx) => (
+                                            <div key={idx} className="flex items-start">
+                                                <div className="w-24 flex-shrink-0 text-sm font-semibold text-slate-500 pt-1">
+                                                    {item.time}
+                                                </div>
+                                                <div className="flex-grow pl-4 border-l-2 border-slate-100">
+                                                    <p className="text-slate-800 font-medium">{item.event}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Local Intel / City Guide */}
+                            {dayData.intel && dayData.intel.city && (
+                                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                                    <div className="flex items-center space-x-2 mb-3 text-golf-800">
+                                        <IconInfo />
+                                        <h3 className="font-serif font-bold text-lg">Local Intel: {dayData.intel.city}</h3>
+                                    </div>
+                                    {dayData.intel.description && (
+                                        <p className="text-slate-600 text-sm mb-4 leading-relaxed">{dayData.intel.description}</p>
+                                    )}
+                                    
+                                    {dayData.intel.hotel && (
+                                        <div className="mb-4">
+                                            <h4 className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-2">Accommodation</h4>
+                                            <p className="text-slate-800 font-medium flex items-center">
+                                                <span className="text-golf-600 mr-2"><IconMapPin /></span>
+                                                {dayData.intel.hotel}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {dayData.intel.hotspots && dayData.intel.hotspots.length > 0 && (
+                                        <div>
+                                            <h4 className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-2">Bars & Restaurants</h4>
+                                            <ul className="space-y-2">
+                                                {dayData.intel.hotspots.map((spot, idx) => (
+                                                    <li key={idx} className="text-sm text-slate-700 flex items-start">
+                                                        <span className="text-gold-500 mr-2 mt-0.5">•</span>
+                                                        {spot}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                        </div>
+                    </main>
+                    <CopyrightFooter />
+                </div>
+            );
+        };
+
+        // --- GOOGLE SHEETS ENGINE ---
+        
+        const fetchGoogleSheet = async (id, sheetName) => {
+            const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Failed to fetch tab: ${sheetName}`);
+            
+            const text = await response.text();
+            const jsonString = text.match(/google\.visualization\.Query\.setResponse\(([\s\S\w]+)\)/);
+            
+            if (!jsonString || !jsonString[1]) throw new Error(`Invalid data format in tab: ${sheetName}`);
+            
+            const data = JSON.parse(jsonString[1]);
+            if (data.status === 'error') throw new Error(`Google Error (${sheetName}): ${data.errors[0].message}`);
+
+            const cols = data.table.cols.map(c => c ? c.label : '');
+            return data.table.rows.map(r => {
+                const rowObj = {};
+                r.c.forEach((cell, i) => {
+                    if (cols[i]) rowObj[cols[i]] = cell ? cell.v : null;
+                });
+                return rowObj;
+            });
+        };
+
+        const groupBy = (array, key) => array.reduce((result, currentValue) => {
+            if (!currentValue[key]) return result;
+            (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
+            return result;
+        }, {});
+
+        // --- MAIN APP ENTRY ---
+        const App = () => {
+            const [sheetId, setSheetId] = useState(localStorage.getItem('golfTourSheetId') || '');
+            const [isConfigured, setIsConfigured] = useState(false);
+            const [isLoading, setIsLoading] = useState(false);
+            const [error, setError] = useState('');
+            
+            const [itinerary, setItinerary] = useState([]);
+            const [matches, setMatches] = useState([]);
+            const [settings, setSettings] = useState({ TourName: '', TourYear: '' });
+            
+            const [currentView, setCurrentView] = useState('menu');
+            const [selectedMatch, setSelectedMatch] = useState(null);
+
+            useEffect(() => {
+                if (sheetId) loadData(sheetId);
+            }, []);
+
+            useEffect(() => {
+                if (settings.TourName) {
+                    document.title = `${settings.TourName} ${settings.TourYear || ''}`.trim();
+                }
+            }, [settings]);
+
+            const loadData = async (idToLoad) => {
+                if (!idToLoad) {
+                    setError('Please enter a valid Sheet ID.');
+                    return;
+                }
+
+                setIsLoading(true);
+                setError('');
+
+                try {
+                    const rawItinerary = await fetchGoogleSheet(idToLoad, 'Itinerary');
+                    const rawSchedule = await fetchGoogleSheet(idToLoad, 'Schedule');
+                    const rawMatches = await fetchGoogleSheet(idToLoad, 'Matches');
+                    const rawHoles = await fetchGoogleSheet(idToLoad, 'Holes');
+
+                    let rawSettings = [];
+                    try {
+                        rawSettings = await fetchGoogleSheet(idToLoad, 'Settings');
+                    } catch (e) {
+                        console.warn("Settings tab not found or missing, using defaults");
+                    }
+
+                    const parsedSettings = {};
+                    rawSettings.forEach(row => {
+                        if (row.Key) parsedSettings[row.Key] = row.Value;
+                    });
+                    setSettings(parsedSettings);
+
+                    const holesByMatch = groupBy(rawHoles, 'MatchID');
+                    const formattedMatches = rawMatches.map(m => ({
+                        id: m.MatchID,
+                        course: m.Course,
+                        date: m.Date,
+                        matchUp: m.MatchUp,
+                        video: m.VideoURL,
+                        holes: (holesByMatch[m.MatchID] || [])
+                            .map(h => ({
+                                number: h.HoleNumber,
+                                name: h.HoleName,
+                                par: h.Par,
+                                yardage: h.Yardage,
+                                tip: h.Tip
+                            }))
+                            .sort((a, b) => a.number - b.number)
+                    })).filter(m => m.id);
+
+                    const scheduleByDate = groupBy(rawSchedule, 'Date');
+                    const formattedItinerary = rawItinerary.map(day => {
+                        const daySchedule = scheduleByDate[day.Date] || [];
+                        return {
+                            day: day.Day,
+                            date: day.Date,
+                            country: day.Country,
+                            wakeUp: day.WakeUpCity,
+                            sleep: day.SleepCity,
+                            quote: day.Quote,
+                            golf: daySchedule.filter(s => s.IsGolf && s.IsGolf.toLowerCase() === 'yes').map(s => ({
+                                course: s.CourseName,
+                                time: s.Time,
+                                matchId: s.MatchID
+                            })),
+                            schedule: daySchedule.filter(s => !s.IsGolf || s.IsGolf.toLowerCase() !== 'yes').map(s => ({
+                                time: s.Time,
+                                event: s.Event
+                            })),
+                            intel: {
+                                city: day.IntelCity,
+                                description: day.IntelDescription,
+                                hotel: day.Hotel,
+                                hotspots: day.Hotspots ? day.Hotspots.split('|').map(s => s.trim()).filter(Boolean) : []
+                            }
+                        };
+                    }).filter(d => d.date);
+
+                    setMatches(formattedMatches);
+                    setItinerary(formattedItinerary);
+                    
+                    setSheetId(idToLoad);
+                    localStorage.setItem('golfTourSheetId', idToLoad);
+                    setIsConfigured(true);
+                    setCurrentView('menu');
+
+                } catch (err) {
+                    console.error(err);
+                    setError(err.message || 'Failed to load database. Check ID and Tab names.');
+                    setIsConfigured(false);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            const clearConfig = () => {
+                localStorage.removeItem('golfTourSheetId');
+                setSheetId('');
+                setIsConfigured(false);
+                setItinerary([]);
+                setMatches([]);
+                setSettings({ TourName: '', TourYear: '' });
+            };
+
+            const goToMatch = (matchId) => {
+                setSelectedMatch(matchId);
+                setCurrentView('matches');
+            };
+
+            if (isLoading && !isConfigured) {
+                return (
+                    <div className="min-h-screen flex flex-col justify-center items-center bg-golf-900 text-white fade-in">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold-500 mb-4"></div>
+                        <p className="text-golf-100 font-serif text-lg tracking-wider">Syncing Tour Database...</p>
+                    </div>
+                );
+            }
+
+            if (!isConfigured) {
+                return <ConfigView onSave={loadData} initialId={sheetId} error={error} />;
+            }
+
+            return (
+                <div className="antialiased">
+                    {currentView === 'menu' && <MainMenu setView={setCurrentView} clearConfig={clearConfig} settings={settings} />}
+                    {currentView === 'matches' && <MatchesView setView={setCurrentView} selectedMatch={selectedMatch} setSelectedMatch={setSelectedMatch} matches={matches} />}
+                    {currentView === 'itinerary' && <ItineraryView setView={setCurrentView} goToMatch={goToMatch} itinerary={itinerary} settings={settings} />}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
