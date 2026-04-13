@@ -61,7 +61,7 @@
 
         // --- APP STATE ---
         let state = {
-            view: 'loading', // 'loading', 'menu', 'matches', 'singleMatch', 'itinerary'
+            view: 'loading',
             matches: [],
             itinerary: [],
             selectedMatchId: null,
@@ -92,7 +92,6 @@
         // Helper to format YouTube URLs for autoplay and mute
         const formatYouTubeUrl = (url) => {
             if (!url) return '';
-            
             let videoId = '';
             if (url.includes('embed/')) {
                 videoId = url.split('embed/')[1].split('?')[0];
@@ -101,7 +100,6 @@
             } else if (url.includes('watch?v=')) {
                 videoId = url.split('watch?v=')[1].split('&')[0];
             }
-            
             return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1` : url;
         };
 
@@ -124,20 +122,37 @@
                     fetchCSV(sheetUrls.holes)
                 ]);
 
-                state.matches = rawMatches.map(match => ({
-                    id: match.matchId, 
-                    course: match.course, 
-                    date: match.date, 
-                    matchUp: match.matchUp, 
-                    video: formatYouTubeUrl(match.video), // Apply video formatting here
-                    holes: rawHoles.filter(hole => hole.matchId === match.matchId).map(hole => ({
-                        number: parseInt(hole.number), name: hole.name, par: parseInt(hole.par), yardage: parseInt(hole.yardage), tip: hole.tip
-                    }))
-                }));
+                // BULLETPROOF MAPPING LOGIC
+                state.matches = rawMatches.map(match => {
+                    // Hunt for the ID column regardless of exact spelling/casing
+                    const mId = match.matchId || match.id || match.MatchId || match.MatchID || '';
+                    
+                    // Filter holes to belong to this match
+                    const matchingHoles = rawHoles.filter(hole => {
+                        const hId = hole.matchId || hole.id || hole.MatchId || hole.MatchID || '';
+                        return hId && mId && String(hId).trim().toLowerCase() === String(mId).trim().toLowerCase();
+                    });
+
+                    return {
+                        id: String(mId).trim(), 
+                        course: match.course, 
+                        date: match.date, 
+                        matchUp: match.matchUp, 
+                        video: formatYouTubeUrl(match.video),
+                        holes: matchingHoles.map(hole => ({
+                            number: parseInt(hole.number) || 0, 
+                            name: hole.name || '', 
+                            par: parseInt(hole.par) || 0, 
+                            yardage: parseInt(hole.yardage) || 0, 
+                            tip: hole.tip || ''
+                        }))
+                    };
+                });
 
                 state.itinerary = rawItinerary.map(day => ({
                     day: day.day, date: day.date, country: day.country, wakeUp: day.wakeUp, sleep: day.sleep, quote: day.quote,
-                    golf: state.matches.filter(m => m.date === day.date).map(m => ({ course: m.course, time: "TBD", matchId: m.id })),
+                    // Link the matches to the itinerary day based on the date
+                    golf: state.matches.filter(m => String(m.date).trim() === String(day.date).trim()).map(m => ({ course: m.course, time: "TBD", matchId: m.id })),
                     schedule: [], 
                     intel: { city: day.intel_city, description: day.intel_desc, hotel: day.intel_hotel, hotspots: day.intel_hotspots ? day.intel_hotspots.split('|') : [] }
                 }));
@@ -231,7 +246,6 @@
             `;
 
             if (match.video) {
-                // Video rendering unchanged, since the URL is formatted during the fetch
                 html += `
                     <div class="video-container shadow-lg">
                         <iframe src="${match.video}" title="Course Video" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -240,25 +254,34 @@
             }
 
             html += `<div class="space-y-4 mt-6">`;
-            match.holes.forEach(hole => {
+            
+            if (match.holes && match.holes.length > 0) {
+                match.holes.forEach(hole => {
+                    html += `
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                            <div class="flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
+                                <div class="flex items-center space-x-3">
+                                    <div class="bg-golf-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">${hole.number}</div>
+                                    <div><h3 class="font-bold text-slate-800">${hole.name || `Hole ${hole.number}`}</h3></div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-bold text-slate-500">Par ${hole.par}</p>
+                                    <p class="text-xs text-slate-400">${hole.yardage} yds</p>
+                                </div>
+                            </div>
+                            <div class="bg-slate-50 rounded-lg p-3 text-sm text-slate-600 border border-slate-100 italic">
+                                <span class="font-bold text-golf-700 not-italic">Caddie Tip: </span>${hole.tip}
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
                 html += `
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-                        <div class="flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
-                            <div class="flex items-center space-x-3">
-                                <div class="bg-golf-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">${hole.number}</div>
-                                <div><h3 class="font-bold text-slate-800">${hole.name}</h3></div>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-sm font-bold text-slate-500">Par ${hole.par}</p>
-                                <p class="text-xs text-slate-400">${hole.yardage} yds</p>
-                            </div>
-                        </div>
-                        <div class="bg-slate-50 rounded-lg p-3 text-sm text-slate-600 border border-slate-100 italic">
-                            <span class="font-bold text-golf-700 not-italic">Caddie Tip: </span>${hole.tip}
-                        </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center text-slate-500">
+                        <p>Course intel is currently being updated...</p>
                     </div>
                 `;
-            });
+            }
 
             html += `</div></main>${renderFooter()}</div>`;
             return html;
@@ -390,7 +413,6 @@
         }
 
         // --- BOOTSTRAP ---
-        // Fetch and load the data immediately
         fetchGoogleSheetsData();
 
     </script>
