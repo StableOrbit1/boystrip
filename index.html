@@ -89,18 +89,34 @@
             render();
         }
 
+        // Helper to format YouTube URLs for autoplay and mute
+        const formatYouTubeUrl = (url) => {
+            if (!url) return '';
+            
+            let videoId = '';
+            if (url.includes('embed/')) {
+                videoId = url.split('embed/')[1].split('?')[0];
+            } else if (url.includes('youtu.be/')) {
+                videoId = url.split('youtu.be/')[1].split('?')[0];
+            } else if (url.includes('watch?v=')) {
+                videoId = url.split('watch?v=')[1].split('&')[0];
+            }
+            
+            return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1` : url;
+        };
+
         // --- DATA FETCHING ---
         async function fetchGoogleSheetsData() {
             try {
-               const fetchCSV = (url) => new Promise((resolve, reject) => {
-    Papa.parse(url, { 
-        download: true, 
-        header: true, 
-        skipEmptyLines: true, // This fixes the blank row crash!
-        complete: (results) => resolve(results.data),
-        error: (error) => reject(error) // This will stop it from hanging if a link breaks
-    });
-});
+                const fetchCSV = (url) => new Promise((resolve, reject) => {
+                    Papa.parse(url, { 
+                        download: true, 
+                        header: true, 
+                        skipEmptyLines: true, 
+                        complete: (results) => resolve(results.data),
+                        error: (err) => reject(err)
+                    });
+                });
 
                 const [rawItinerary, rawMatches, rawHoles] = await Promise.all([
                     fetchCSV(sheetUrls.itinerary),
@@ -109,7 +125,11 @@
                 ]);
 
                 state.matches = rawMatches.map(match => ({
-                    id: match.matchId, course: match.course, date: match.date, matchUp: match.matchUp, video: match.video,
+                    id: match.matchId, 
+                    course: match.course, 
+                    date: match.date, 
+                    matchUp: match.matchUp, 
+                    video: formatYouTubeUrl(match.video), // Apply video formatting here
                     holes: rawHoles.filter(hole => hole.matchId === match.matchId).map(hole => ({
                         number: parseInt(hole.number), name: hole.name, par: parseInt(hole.par), yardage: parseInt(hole.yardage), tip: hole.tip
                     }))
@@ -211,6 +231,7 @@
             `;
 
             if (match.video) {
+                // Video rendering unchanged, since the URL is formatted during the fetch
                 html += `
                     <div class="video-container shadow-lg">
                         <iframe src="${match.video}" title="Course Video" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -328,7 +349,7 @@
                                 </div>
             `;
 
-            if (dayData.intel.hotspots.length > 0) {
+            if (dayData.intel.hotspots && dayData.intel.hotspots.length > 0) {
                 html += `<div><h4 class="text-xs uppercase tracking-wider font-bold text-slate-400 mb-2">Bars & Restaurants</h4><ul class="space-y-2">`;
                 dayData.intel.hotspots.forEach(spot => {
                     html += `<li class="text-sm text-slate-700 flex items-start"><span class="text-gold-500 mr-2 mt-0.5">&bull;</span>${spot}</li>`;
