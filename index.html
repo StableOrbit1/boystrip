@@ -70,9 +70,9 @@
 
         // --- GOOGLE SHEETS URLS ---
         const sheetUrls = {
-            itinerary: 'YOUR_ITINERARY_CSV_URL_HERE',
-            matches: 'YOUR_MATCHES_CSV_URL_HERE',
-            holes: 'YOUR_HOLES_CSV_URL_HERE'
+            itinerary: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSWo3Yh7t25FQHKWbwOwlBMqlS0KvH89mCw494kbiHakFe7jbmTxHwu4V6oRwI0_E6upPCv9MgwN23i/pub?gid=0&single=true&output=csv',
+            matches: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSWo3Yh7t25FQHKWbwOwlBMqlS0KvH89mCw494kbiHakFe7jbmTxHwu4V6oRwI0_E6upPCv9MgwN23i/pub?gid=2141277357&single=true&output=csv',
+            holes: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSWo3Yh7t25FQHKWbwOwlBMqlS0KvH89mCw494kbiHakFe7jbmTxHwu4V6oRwI0_E6upPCv9MgwN23i/pub?gid=1612329092&single=true&output=csv'
         };
 
         // --- CORE FUNCTIONS ---
@@ -363,14 +363,8 @@
         }
 
         // --- BOOTSTRAP ---
-        // For testing without the Google Sheet, you could populate state manually here.
-        // Otherwise, run fetchGoogleSheetsData() to load everything.
-        
-        // Uncomment this line to activate the fetch when you add your URLs:
-        // fetchGoogleSheetsData(); 
-        
-        // TEMPORARY: Just showing the loading state until you connect the sheets
-        render();
+        // Fetch and load the data immediately
+        fetchGoogleSheetsData();
 
     </script>
 </body>
