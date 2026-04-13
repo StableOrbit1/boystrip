@@ -92,9 +92,15 @@
         // --- DATA FETCHING ---
         async function fetchGoogleSheetsData() {
             try {
-                const fetchCSV = (url) => new Promise((resolve) => {
-                    Papa.parse(url, { download: true, header: true, complete: (results) => resolve(results.data) });
-                });
+               const fetchCSV = (url) => new Promise((resolve, reject) => {
+    Papa.parse(url, { 
+        download: true, 
+        header: true, 
+        skipEmptyLines: true, // This fixes the blank row crash!
+        complete: (results) => resolve(results.data),
+        error: (error) => reject(error) // This will stop it from hanging if a link breaks
+    });
+});
 
                 const [rawItinerary, rawMatches, rawHoles] = await Promise.all([
                     fetchCSV(sheetUrls.itinerary),
