@@ -235,8 +235,9 @@
             } else if (url.includes('watch?v=')) {
                 videoId = url.split('watch?v=')[1].split('&')[0];
             }
-            // Mute + Autoplay forced
-            return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1` : url;
+            // Removed mute=1 so the video plays with sound.
+            // Note: Modern browsers may block autoplay if sound is unmuted.
+            return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1` : url;
         };
 
         async function fetchGoogleSheetsData() {
@@ -268,6 +269,7 @@
                         id: String(mId).trim(), 
                         course: match.course, 
                         date: match.date, 
+                        teeTime: match.teeTime || 'TBD', // Pulls from new "teeTime" column
                         matchUp: match.matchUp, 
                         // Pull the dynamic teams from CSV if they exist, fallback to generic
                         teamA: match.teamA || 'Team A',
@@ -286,7 +288,12 @@
                 // Map Itinerary
                 state.itinerary = rawItinerary.map(day => ({
                     day: day.day, date: day.date, country: day.country, wakeUp: day.wakeUp, sleep: day.sleep, quote: day.quote,
-                    golf: state.matches.filter(m => String(m.date).trim() === String(day.date).trim()).map(m => ({ course: m.course, time: "TBD", matchId: m.id })),
+                    // Link the matches to the itinerary day using flexible date matching
+                    golf: state.matches.filter(m => {
+                        const mDate = String(m.date).toLowerCase().trim();
+                        const iDate = String(day.date).toLowerCase().trim();
+                        return mDate.includes(iDate) || iDate.includes(mDate);
+                    }).map(m => ({ course: m.course, time: m.teeTime, matchId: m.id })),
                     schedule: [], // You can map real schedule items here if you build a 4th tab!
                     intel: { city: day.intel_city, description: day.intel_desc, hotel: day.intel_hotel, hotspots: day.intel_hotspots ? day.intel_hotspots.split('|') : [] }
                 }));
@@ -576,20 +583,24 @@
                 let itemsHtml = '';
                 data.golf.forEach(g => {
                     itemsHtml += `
-                        <div class="flex justify-between items-center bg-emerald-800 rounded-xl p-4 mb-2 shadow-inner">
-                            <h4 class="font-bold text-lg text-white">${g.course}</h4>
-                            <button onclick="jumpToMatch('${g.matchId}')" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-100 font-bold px-3 py-2 rounded-lg border border-emerald-700 text-xs tracking-widest uppercase transition-all active:scale-95 flex items-center gap-2 shadow-md group">
-                                TEE: ${g.time} 
+                        <button onclick="jumpToMatch('${g.matchId}')" class="w-full text-left flex justify-between items-center bg-emerald-800 hover:bg-emerald-700 focus:bg-emerald-600 rounded-xl p-4 mb-3 shadow-md border border-emerald-600 transition-all group active:scale-[0.98]">
+                            <div>
+                                <h4 class="font-bold text-lg text-white group-hover:text-emerald-50 transition-colors">${g.course}</h4>
+                                <div class="flex items-center gap-1 text-emerald-300 text-xs font-bold uppercase tracking-widest mt-1">
+                                    <span class="text-amber-400">⛳️ TEE TIME:</span> ${g.time}
+                                </div>
+                            </div>
+                            <div class="bg-emerald-950 text-emerald-100 rounded-full w-8 h-8 flex items-center justify-center group-hover:bg-emerald-900 transition-colors">
                                 <span class="group-hover:translate-x-1 transition-transform">→</span>
-                            </button>
-                        </div>`;
+                            </div>
+                        </button>`;
                 });
                 golfHtml = `
                     <div class="bg-emerald-900 text-white rounded-2xl shadow-lg overflow-hidden mb-6">
                         <div class="px-5 py-4 border-b border-emerald-800 flex items-center space-x-2">
                             ${SVG_FLAG} <h3 class="font-serif font-bold text-xl">The Golf</h3>
                         </div>
-                        <div class="p-3">${itemsHtml}</div>
+                        <div class="p-3 pb-1">${itemsHtml}</div>
                     </div>`;
             }
 
