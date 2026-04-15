@@ -25,101 +25,60 @@
         }
     </script>
 
-    <!-- PapaParse for Google Sheets CSV Parsing -->
+    <!-- Dependencies -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
     <style>
-        body { 
-            background-color: #f5f5f4; 
-            font-family: 'Inter', sans-serif; 
-            -webkit-tap-highlight-color: transparent; 
-        }
+        body { background-color: #f5f5f4; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .serif { font-family: 'Playfair Display', serif; }
-        
-        /* Hide scrollbars for clean horizontal scrolling */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Smooth Fade In Animation */
         .fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Number Input reset */
-        input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { 
-            -webkit-appearance: none; margin: 0; 
-        }
-
-        .tab-active {
-            border-bottom: 3px solid #064e3b; /* emerald-900 */
-            color: #1c1917 !important; /* stone-900 */
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .tab-active { border-bottom: 3px solid #064e3b; color: #1c1917 !important; }
+        .golf-gradient { background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); }
     </style>
 </head>
 <body class="text-slate-900 antialiased">
 
-    <!-- ==========================================
-         0. LOADING SCREEN 
-         ========================================== -->
+    <!-- Loading Screen -->
     <div id="view-loading" class="fixed inset-0 z-[200] bg-stone-950 flex flex-col items-center justify-center p-6 text-center">
-        <h2 class="serif text-3xl text-emerald-500 animate-pulse italic">Loading Tour Intel...</h2>
+        <h2 class="serif text-3xl text-emerald-500 animate-pulse italic">Connecting to Tour Database...</h2>
     </div>
 
-    <!-- ==========================================
-         1. LANDING HUB 
-         ========================================== -->
+    <!-- Hub View -->
     <div id="view-hub" class="hidden fixed inset-0 z-[100] bg-stone-950 flex flex-col items-center justify-center p-6 text-center">
         <div class="mb-12 fade-in">
             <h1 class="serif text-6xl md:text-8xl text-white italic mb-4 leading-tight">This is 50.</h1>
             <p class="text-stone-500 tracking-[0.4em] uppercase text-[10px] font-bold">Scotland & Ireland Elite Tour 2026</p>
         </div>
-
         <div class="space-y-4 w-full max-w-sm fade-in" style="animation-delay: 0.1s">
-            <button onclick="navigateTo('matches')" class="w-full py-6 bg-emerald-800 hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest transition-all shadow-2xl border border-emerald-600 active:scale-95">
-                View the Golf Matches
-            </button>
-            
-            <button onclick="navigateTo('itinerary')" class="w-full py-6 bg-stone-800 hover:bg-stone-700 text-white rounded-2xl font-bold uppercase tracking-widest transition-all shadow-2xl border border-stone-600 active:scale-95">
-                View the Itinerary
-            </button>
+            <button onclick="navigateTo('matches')" class="w-full py-6 bg-emerald-800 hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest transition-all shadow-2xl border border-emerald-600 active:scale-95">View the Golf Matches</button>
+            <button onclick="navigateTo('itinerary')" class="w-full py-6 bg-stone-800 hover:bg-stone-700 text-white rounded-2xl font-bold uppercase tracking-widest transition-all shadow-2xl border border-stone-600 active:scale-95">View the Itinerary</button>
         </div>
-
-        <div class="absolute bottom-6 opacity-30 fade-in flex flex-col items-center gap-1" style="animation-delay: 0.3s">
-            <p class="text-white text-[8px] tracking-widest uppercase">&copy; 2026 FAKC • Flatson Ass Kicking Corp</p>
-        </div>
+        <div id="cloud-sync-indicator" class="mt-8 text-[9px] text-emerald-500/50 uppercase tracking-widest font-bold">● Live Sheet Database Active</div>
     </div>
 
-    <!-- ==========================================
-         2. GOLF MATCHES VIEW
-         ========================================== -->
+    <!-- Matches View -->
     <div id="view-matches" class="hidden min-h-screen pb-12 flex flex-col">
-        <!-- Header -->
         <header class="bg-stone-900 text-white py-10 px-6 text-center shadow-2xl relative">
             <button onclick="navigateTo('hub')" class="absolute left-4 top-4 text-stone-400 text-[10px] font-bold uppercase tracking-widest border border-stone-700 px-3 py-2 rounded-lg hover:bg-stone-800 transition">← Hub</button>
             <h1 class="serif text-4xl md:text-5xl mb-2 italic">Match Day</h1>
             <p class="text-stone-400 tracking-[0.2em] uppercase text-[10px] font-bold">Ledger & Yardage Book</p>
         </header>
 
-        <!-- Course Tabs -->
         <nav class="sticky top-0 z-50 bg-white border-b border-stone-200 shadow-sm overflow-x-auto hide-scrollbar">
-            <div class="max-w-7xl mx-auto flex px-2 py-1" id="matches-tabs">
-                <!-- Tabs generated by JS -->
-            </div>
+            <div class="max-w-7xl mx-auto flex px-2 py-1" id="matches-tabs"></div>
         </nav>
 
         <main class="max-w-3xl w-full mx-auto p-4 md:p-8 flex-grow">
-            <!-- Score Banner -->
             <div id="score-banner" class="mb-6 text-center bg-emerald-900 text-white py-5 rounded-2xl shadow-xl border-2 border-emerald-700">
                 <span id="display-score" class="text-3xl font-black italic serif tracking-tight">ALL SQUARE</span>
             </div>
             
-            <!-- Dynamic Course Content -->
             <div id="course-content"></div>
             
-            <!-- Juice Ledger Section -->
             <section id="juice-section" class="mt-8 bg-white rounded-3xl shadow-xl border border-amber-200 overflow-hidden">
                 <div class="bg-amber-50 p-6 border-b border-amber-100 flex items-center gap-4">
                     <span class="text-4xl">🧃</span>
@@ -130,28 +89,20 @@
                 </div>
                 <div class="p-4 overflow-x-auto">
                     <table class="w-full text-xs border-collapse min-w-[300px]">
-                        <thead>
-                            <tr class="text-stone-400 border-b" id="juice-table-header">
-                                <!-- Generated by JS based on PLAYERS -->
-                            </tr>
-                        </thead>
+                        <thead><tr class="text-stone-400 border-b" id="juice-table-header"></tr></thead>
                         <tbody id="juice-table"></tbody>
                     </table>
                     <div class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3" id="juice-totals"></div>
                 </div>
             </section>
         </main>
-
         <footer class="text-center py-6">
             <p class="text-slate-400 text-[8px] tracking-widest uppercase">&copy; 2026 FAKC • Flatson Ass Kicking Corp</p>
         </footer>
     </div>
 
-    <!-- ==========================================
-         3. ITINERARY VIEW
-         ========================================== -->
+    <!-- Itinerary View -->
     <div id="view-itinerary" class="hidden min-h-screen flex flex-col">
-        <!-- Header -->
         <header class="bg-emerald-950 text-white shadow-xl sticky top-0 z-[60]">
             <div class="max-w-4xl mx-auto px-4 py-6 flex items-center justify-between">
                 <button onclick="navigateTo('hub')" class="text-emerald-300 text-[10px] font-bold uppercase tracking-widest border border-emerald-800 px-3 py-2 rounded-lg hover:bg-emerald-900 transition">← Hub</button>
@@ -161,612 +112,342 @@
                 </div>
                 <div class="w-10"></div>
             </div>
-            <!-- Horizontal Date Scroller -->
             <div class="bg-black/30 backdrop-blur-md py-3 overflow-x-auto hide-scrollbar">
-                <div id="itinerary-tabs" class="flex gap-2 px-4 min-w-max mx-auto md:justify-center">
-                    <!-- Date buttons generated by JS -->
-                </div>
+                <div id="itinerary-tabs" class="flex gap-2 px-4 min-w-max mx-auto md:justify-center"></div>
             </div>
         </header>
-
-        <main id="itinerary-content" class="flex-grow max-w-4xl w-full mx-auto p-4 md:p-8 swipe-container"></main>
-        
-        <footer class="text-center py-8">
-            <p class="text-slate-400 text-[8px] tracking-widest uppercase">&copy; 2026 FAKC • Flatson Ass Kicking Corp</p>
-        </footer>
+        <main id="itinerary-content" class="flex-grow max-w-4xl w-full mx-auto p-4 md:p-8"></main>
     </div>
 
-    <!-- ==========================================
-         EXPORT MODAL
-         ========================================== -->
-    <div id="export-modal" class="fixed inset-0 bg-black/80 z-[100] hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
-            <div class="p-6 border-b flex justify-between items-center bg-stone-50">
-                <h3 class="serif text-xl font-bold text-stone-800">Daily Recap</h3>
-                <button onclick="closeModal()" class="text-stone-400 text-2xl font-bold hover:text-stone-600">✕</button>
-            </div>
-            <div class="p-6">
-                <textarea id="export-text" class="w-full h-56 p-4 font-mono text-sm bg-stone-900 text-emerald-400 border border-stone-800 rounded-xl mb-4 resize-none focus:outline-none shadow-inner" readonly></textarea>
-                <button onclick="copyExport()" class="w-full bg-emerald-700 text-white py-4 rounded-xl font-bold uppercase tracking-widest hover:bg-emerald-600 transition-colors active:scale-95 shadow-md">Copy to Clipboard</button>
-                <p id="copy-status" class="text-center text-xs text-emerald-600 font-bold mt-3 opacity-0 transition-opacity duration-300">COPIED SUCCESSFULLY!</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- ==========================================
-         APPLICATION SCRIPTS 
-         ========================================== -->
     <script>
-        // --- 1. SVGs for UI ---
-        const SVG_SUNRISE = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m19.07 4.93-1.41 1.41"></path><path d="M22 17v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-3"></path><path d="m7 16 5-5 5 5"></path></svg>';
-        const SVG_MOON = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>';
-        const SVG_FLAG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>';
-        const SVG_INFO = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>';
+        // --- 1. CONFIG & GLOBALS ---
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwbnxhpeLc7aYjRTwZJuKx_igHRzH2rMkiBi16Z5MKjWixaHqLJYsWUac9nd4H7mXo_/exec"; 
 
-        // --- 2. GLOBAL STATE & DATA ---
-        // Edit these initials to match your group!
-        const PLAYERS = ["CF", "SW", "GC", "PC"]; 
+        const PLAYERS = ["GC", "PI", "SW", "CF"]; 
+        const FULL_NAMES = { "GC": "Greg", "PI": "Parker", "SW": "Scott", "CF": "Craig" };
         
+        const SVG_PINT = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M7 21h10a2 2 0 0 0 2-2l1-13H4l1 13a2 2 0 0 0 2 2Z"></path><path d="M12 6v15"></path><path d="M15 6v15"></path><path d="M9 6v15"></path><path d="M19 6V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v1"></path></svg>`;
+
+        const TOASTS = [
+            "May the best ye’ve ever seen be the worst ye’ll ever see.",
+            "May you be in heaven a half hour before the devil knows you’re dead.",
+            "Lang may your lum reek with other people’s coal!",
+            "May the hinges of our friendship never grow rusty.",
+            "Sláinte mhath! (Good health!)",
+            "There are no strangers here, only friends you haven't yet met.",
+            "May you always have a clean shirt, a clear conscience, and a guinea in your pocket.",
+            "May the road rise up to meet you and the wind be always at your back.",
+            "May the roof above us never fall in, and may we friends gathered below never fall out.",
+            "Freedom and whisky gang thegither!",
+            "May you have the hindsight to know where you've been, the foresight to know where you're going, and the insight to know when you're going too far.",
+            "To a long life and a merry one. A quick death and an easy one. A pretty girl and an honest one. A cold beer and another one!",
+            "Here’s to being single, or here’s to being married, or here’s to being like me: somewhere in between!",
+            "May we never want a friend in need, nor a friend to help us.",
+            "To the world, you may be one person, but to one person you may be the world.",
+            "May your neighbors respect you, trouble neglect you, the angels protect you, and heaven accept you.",
+            "Here’s to the floor that never gives way, and the roof that never falls in.",
+            "May we always be as merry as we are today.",
+            "To absent friends. God bless them.",
+            "May you live as long as you want, and never want as long as you live.",
+            "Here’s to champagne for our real friends, and real pain for our sham friends.",
+            "May we always have a friend to buy us a drink, and a drink to buy a friend.",
+            "A glass in the hand is worth two on the shelf.",
+            "To good health, good wealth, and the time to enjoy them both.",
+            "May you work like you don't need the money, love like you've never been hurt, and dance like no one is watching.",
+            "Here’s to those who wish us well, and those who don't can go to... well, you know.",
+            "May the bridge you cross be the one you don't burn.",
+            "To the nights we can't remember, with the friends we'll never forget.",
+            "May your glass be ever full, and your heart be ever light.",
+            "Drink today, and drown all sorrow; you shall perhaps not do it tomorrow.",
+            "Here’s to a long life and a happy one. A quick death and an easy one.",
+            "To the friends we’ve made, the friends we’ve lost, and the friends we’re about to make.",
+            "May we always have the courage of our convictions and the conviction of our courage.",
+            "Here's to the liars, the cheaters, the thieves, and the drinkers.",
+            "May you lie only to save a friend.",
+            "May you cheat only death.",
+            "May you steal only a heart.",
+            "I have taken more out of alcohol than alcohol has taken out of me. — Winston Churchill",
+            "Work is the curse of the drinking classes. — Oscar Wilde",
+            "In victory, you deserve Champagne. In defeat, you need it. — Napoleon Bonaparte",
+            "Beer is proof that God loves us and wants us to be happy. — Benjamin Franklin",
+            "Here's to doing and drinking, not sitting and thinking.",
+            "To the best of times, which are always yet to come.",
+            "May your heart be light and your glass be heavy."
+        ];
+
         let state = {
             matches: [],
             itinerary: [],
-            matchData: {}, // Holds the hole-by-hole scores
-            sideBets: {},  // Holds the juice ledger bets
+            matchData: {}, 
+            sideBets: {},  
+            beltPoints: {}, 
             currentCourseId: null,
             currentDayIdx: 0,
-            isGlobalLedger: false
+            activeTab: 'matches'
         };
 
-        // --- GOOGLE SHEETS URLS ---
         const sheetUrls = {
             itinerary: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSWo3Yh7t25FQHKWbwOwlBMqlS0KvH89mCw494kbiHakFe7jbmTxHwu4V6oRwI0_E6upPCv9MgwN23i/pub?gid=0&single=true&output=csv',
             matches: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSWo3Yh7t25FQHKWbwOwlBMqlS0KvH89mCw494kbiHakFe7jbmTxHwu4V6oRwI0_E6upPCv9MgwN23i/pub?gid=2141277357&single=true&output=csv',
             holes: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSWo3Yh7t25FQHKWbwOwlBMqlS0KvH89mCw494kbiHakFe7jbmTxHwu4V6oRwI0_E6upPCv9MgwN23i/pub?gid=1612329092&single=true&output=csv'
         };
 
-        // --- 3. FETCH & PARSE DATA ---
-        const formatYouTubeUrl = (url) => {
-            if (!url) return '';
-            let videoId = '';
-            if (url.includes('embed/')) {
-                videoId = url.split('embed/')[1].split('?')[0];
-            } else if (url.includes('youtu.be/')) {
-                videoId = url.split('youtu.be/')[1].split('?')[0];
-            } else if (url.includes('watch?v=')) {
-                videoId = url.split('watch?v=')[1].split('&')[0];
-            }
-            // Removed mute=1 so the video plays with sound.
-            // Note: Modern browsers may block autoplay if sound is unmuted.
-            return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1` : url;
-        };
-
-        async function fetchGoogleSheetsData() {
+        // --- 2. DATA PIPELINE ---
+        async function fetchInitialData() {
             try {
-                const fetchCSV = (url) => new Promise((resolve, reject) => {
-                    Papa.parse(url, { 
-                        download: true, header: true, skipEmptyLines: true, 
-                        complete: (results) => resolve(results.data),
-                        error: (err) => reject(err)
-                    });
-                });
+                const fetchCSV = (url) => new Promise((res, rej) => Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => res(r.data), error: rej }));
+                const [itn, mtch, hls] = await Promise.all([fetchCSV(sheetUrls.itinerary), fetchCSV(sheetUrls.matches), fetchCSV(sheetUrls.holes)]);
 
-                const [rawItinerary, rawMatches, rawHoles] = await Promise.all([
-                    fetchCSV(sheetUrls.itinerary),
-                    fetchCSV(sheetUrls.matches),
-                    fetchCSV(sheetUrls.holes)
-                ]);
-
-                // Map Matches
-                state.matches = rawMatches.map(match => {
-                    const mId = match.matchId || match.id || match.MatchId || match.MatchID || '';
-                    
-                    const matchingHoles = rawHoles.filter(hole => {
-                        const hId = hole.matchId || hole.id || hole.MatchId || hole.MatchID || '';
-                        return hId && mId && String(hId).trim().toLowerCase() === String(mId).trim().toLowerCase();
-                    });
-
+                state.matches = mtch.map(m => {
+                    const mId = String(m.matchId || m.id || '').trim();
                     return {
-                        id: String(mId).trim(), 
-                        course: match.course, 
-                        date: match.date, 
-                        teeTime: match.teeTime || 'TBD', // Pulls from new "teeTime" column
-                        matchUp: match.matchUp, 
-                        // Pull the dynamic teams from CSV if they exist, fallback to generic
-                        teamA: match.teamA || 'Team A',
-                        teamB: match.teamB || 'Team B',
-                        video: formatYouTubeUrl(match.video),
-                        holes: matchingHoles.map(hole => ({
-                            number: parseInt(hole.number) || 0, 
-                            name: hole.name || '', 
-                            par: parseInt(hole.par) || 0, 
-                            yardage: parseInt(hole.yardage) || 0, 
-                            tip: hole.tip || ''
+                        id: mId, course: m.course, date: m.date, matchUp: m.matchUp, teeTime: m.teeTime || 'TBD',
+                        teamA: m.teamA || 'Team A', teamB: m.teamB || 'Team B', video: formatYouTubeUrl(m.video),
+                        holes: hls.filter(h => String(h.matchId || h.id).trim() === mId).map(h => ({
+                            number: parseInt(h.number), name: h.name, par: parseInt(h.par), yardage: parseInt(h.yardage), tip: h.tip
                         }))
                     };
                 });
 
-                // Map Itinerary
-                state.itinerary = rawItinerary.map(day => ({
-                    day: day.day, date: day.date, country: day.country, wakeUp: day.wakeUp, sleep: day.sleep, quote: day.quote,
-                    // Link the matches to the itinerary day using flexible date matching
+                state.itinerary = itn.map(day => ({
+                    day: day.day, date: day.date, quote: day.quote, wakeUp: day.wakeUp, sleep: day.sleep,
                     golf: state.matches.filter(m => {
                         const mDate = String(m.date).toLowerCase().trim();
                         const iDate = String(day.date).toLowerCase().trim();
                         return mDate.includes(iDate) || iDate.includes(mDate);
                     }).map(m => ({ course: m.course, time: m.teeTime, matchId: m.id })),
-                    schedule: [], // You can map real schedule items here if you build a 4th tab!
                     intel: { city: day.intel_city, description: day.intel_desc, hotel: day.intel_hotel, hotspots: day.intel_hotspots ? day.intel_hotspots.split('|') : [] }
                 }));
 
-                // Set initial course ID
-                if (state.matches.length > 0) {
-                    state.currentCourseId = state.matches[0].id;
-                }
+                if (state.matches.length > 0) state.currentCourseId = state.matches[0].id;
 
-                // Hide loading, show Hub
+                await loadLiveStorage();
+
                 document.getElementById('view-loading').classList.add('hidden');
                 document.getElementById('view-hub').classList.remove('hidden');
 
-            } catch (error) {
-                console.error("Error fetching data:", error);
-                document.getElementById('view-loading').innerHTML = `<h2 class="serif text-3xl text-red-500">Error loading Tour Intel. Check Console.</h2>`;
-            }
+            } catch (e) { console.error("Load Error:", e); }
         }
 
-        // --- 4. NAVIGATION ---
+        async function loadLiveStorage() {
+            try {
+                const response = await fetch(GAS_WEB_APP_URL);
+                const data = await response.json();
+                
+                data.forEach(row => {
+                    if (row.category === 'matchData') {
+                        if (!state.matchData[row.courseId]) state.matchData[row.courseId] = {};
+                        state.matchData[row.courseId][row.key] = row.value;
+                    } else if (row.category === 'sideBets') {
+                        if (!state.sideBets[row.courseId]) state.sideBets[row.courseId] = {};
+                        state.sideBets[row.courseId][row.key] = JSON.parse(row.value);
+                    } else if (row.category === 'beltPoints') {
+                        if (!state.beltPoints[row.courseId]) state.beltPoints[row.courseId] = {};
+                        state.beltPoints[row.courseId][row.key] = row.value;
+                    }
+                });
+            } catch (e) { console.error("Sheet Load Error:", e); }
+        }
+
+        async function postToSheet(params) {
+            try {
+                fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params)
+                });
+            } catch (e) { console.error("Save Error:", e); }
+        }
+
+        // --- 3. CLOUD SAVE WRAPPERS ---
+        function saveMatchPoint(crsId, hole, val) {
+            if (!state.matchData[crsId]) state.matchData[crsId] = {};
+            state.matchData[crsId][hole] = val;
+            postToSheet({ category: 'matchData', courseId: crsId, key: hole, value: val });
+            updateScore();
+        }
+
+        function saveSideBet(betId, amt, won) {
+            const cId = state.currentCourseId;
+            if (!state.sideBets[cId]) state.sideBets[cId] = {};
+            if (!state.sideBets[cId][betId]) state.sideBets[cId][betId] = { amount: 0, won: false };
+            if (amt !== null) state.sideBets[cId][betId].amount = parseFloat(amt) || 0;
+            if (won !== null) state.sideBets[cId][betId].won = won;
+            postToSheet({ category: 'sideBets', courseId: cId, key: betId, value: JSON.stringify(state.sideBets[cId][betId]) });
+            renderJuiceTable();
+        }
+
+        function saveBeltScore(crsId, player, val) {
+            if (!state.beltPoints[crsId]) state.beltPoints[crsId] = {};
+            state.beltPoints[crsId][player] = parseInt(val) || 0;
+            postToSheet({ category: 'beltPoints', courseId: crsId, key: player, value: val });
+            viewBeltPoints();
+        }
+
+        // --- 4. NAVIGATION & RENDERING ---
+        function formatYouTubeUrl(url) {
+            if (!url) return '';
+            let v = '';
+            if (url.includes('embed/')) v = url.split('embed/')[1].split('?')[0];
+            else if (url.includes('youtu.be/')) v = url.split('youtu.be/')[1].split('?')[0];
+            else if (url.includes('watch?v=')) v = url.split('watch?v=')[1].split('&')[0];
+            return v ? `https://www.youtube.com/embed/${v}?autoplay=1&mute=1` : url;
+        }
+
         function navigateTo(viewId) {
-            ['hub', 'matches', 'itinerary'].forEach(id => {
-                const el = document.getElementById('view-' + id);
-                if (el) el.classList.add('hidden');
-            });
-            const target = document.getElementById('view-' + viewId);
-            if (target) {
-                target.classList.remove('hidden');
-                target.classList.add('fade-in');
-            }
-
-            if (viewId === 'matches') {
-                renderMatchesNav();
-                switchCourse(state.currentCourseId);
-            }
-            if (viewId === 'itinerary') {
-                renderItineraryNav();
-                renderItineraryContent();
-                attachSwipeListeners();
-            }
-            window.scrollTo(0, 0);
+            ['hub', 'matches', 'itinerary'].forEach(id => document.getElementById('view-' + id).classList.add('hidden'));
+            document.getElementById('view-' + viewId).classList.remove('hidden');
+            if (viewId === 'matches') renderMatchesNav(), switchCourse(state.currentCourseId);
+            if (viewId === 'itinerary') renderItineraryNav(), renderItineraryContent();
         }
 
-        function jumpToMatch(courseId) {
-            state.currentCourseId = courseId;
-            navigateTo('matches');
-        }
-
-        // --- 5. GOLF MATCHES LOGIC ---
         function renderMatchesNav() {
-            let html = `<button onclick="viewLedger()" id="tab-ledger" class="course-tab whitespace-nowrap px-4 py-4 text-xs font-bold uppercase tracking-tighter text-amber-600 bg-amber-50/50">🧃 Juice Ledger</button>`;
+            let html = `<button onclick="viewLedger()" id="tab-ledger" class="course-tab whitespace-nowrap px-4 py-4 text-xs font-bold uppercase tracking-tighter text-amber-600">🧃 Juice</button>`;
+            html += `<button onclick="viewBeltPoints()" id="tab-belt" class="course-tab whitespace-nowrap px-4 py-4 text-xs font-bold uppercase tracking-tighter text-blue-600">🏆 Belt</button>`;
+            html += `<button onclick="viewNextRound()" id="tab-next" class="course-tab whitespace-nowrap px-4 py-4 text-xs font-bold uppercase tracking-tighter text-emerald-600">${SVG_PINT} Next</button>`;
             state.matches.forEach(c => {
-                html += `<button onclick="switchCourse('${c.id}')" id="tab-${c.id}" class="course-tab whitespace-nowrap px-4 py-4 text-xs font-bold uppercase tracking-tighter text-stone-500 transition-colors">${c.course}</button>`;
+                html += `<button onclick="switchCourse('${c.id}')" id="tab-${c.id}" class="course-tab whitespace-nowrap px-4 py-4 text-xs font-bold uppercase tracking-tighter text-stone-500">${c.course}</button>`;
             });
             document.getElementById('matches-tabs').innerHTML = html;
         }
 
+        function clearTabs() {
+            document.querySelectorAll('.course-tab').forEach(el => el.classList.remove('tab-active', 'text-stone-900'));
+            document.getElementById('score-banner').classList.add('hidden');
+            document.getElementById('juice-section').classList.add('hidden');
+        }
+
+        function viewBeltPoints() {
+            clearTabs();
+            state.activeTab = 'belt';
+            document.getElementById('tab-belt').classList.add('tab-active');
+            let sums = {}; PLAYERS.forEach(p => sums[p] = 0);
+            let rows = state.matches.map(m => {
+                return `<tr class="border-b border-stone-100"><td class="py-4 text-[10px] font-bold text-stone-500 uppercase leading-tight w-24">${m.course}</td>` + 
+                    PLAYERS.map(p => {
+                        const val = (state.beltPoints[m.id] && state.beltPoints[m.id][p]) || 0;
+                        sums[p] += parseInt(val);
+                        return `<td><input type="number" value="${val || ''}" onchange="saveBeltScore('${m.id}', '${p}', this.value)" class="w-full text-center py-2 font-bold focus:ring-2 focus:ring-blue-500 rounded bg-stone-100"></td>`;
+                    }).join('') + `</tr>`;
+            }).join('');
+            const sorted = Object.entries(sums).sort((a,b)=>b[1]-a[1]);
+            const ranks = {}; sorted.forEach((e,i)=>ranks[e[0]]=i+1);
+            document.getElementById('course-content').innerHTML = `<div class="bg-white rounded-3xl shadow-xl overflow-hidden mb-4 border border-blue-200 fade-in"><div class="p-6 bg-blue-50 border-b flex items-center gap-4"><span class="text-3xl">🏆</span><div><h2 class="serif text-2xl text-blue-900 font-bold">Champions Belt</h2><p class="text-[10px] text-blue-700 font-bold uppercase tracking-widest">Net Pars or Better</p></div></div><div class="p-4 overflow-x-auto"><table class="w-full border-collapse"><thead><tr class="text-stone-400 text-[10px] uppercase font-bold border-b"><th class="text-left pb-2">Course</th>${PLAYERS.map(p=>`<th class="pb-2">${p}</th>`).join('')}</tr></thead><tbody>${rows}</tbody><tr class="bg-stone-900 text-white font-black"><td class="p-4 text-[10px] uppercase">Rank</td>${PLAYERS.map(p=>`<td class="text-center"><div class="text-lg">${sums[p]}</div><div class="text-[9px] text-blue-400">${ranks[p]}${['st','nd','rd','th'][ranks[p]-1]}</div></td>`).join('')}</tr></table></div></div>`;
+        }
+
+        function viewNextRound() {
+            clearTabs();
+            state.activeTab = 'next';
+            document.getElementById('tab-next').classList.add('tab-active');
+            document.getElementById('course-content').innerHTML = `<div class="bg-stone-950 rounded-3xl shadow-2xl p-10 text-center fade-in"><div class="mb-10"><div class="inline-block p-5 rounded-full bg-emerald-500/10 mb-6 border border-emerald-500/20"><svg class="w-16 h-16 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 0 0 2-2l1-13H4l1 13a2 2 0 0 0 2 2Z" stroke-width="1.5"/><path d="M12 6v15" stroke-width="1.5"/><path d="M15 6v15" stroke-width="1.5"/><path d="M9 6v15" stroke-width="1.5"/><path d="M19 6V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v1" stroke-width="1.5"/></svg></div><h2 class="serif text-4xl text-white italic font-bold">The Round Selection</h2><p class="text-stone-500 text-[10px] font-bold uppercase tracking-[0.4em] mt-3">Designating the Patron of the Pub</p></div><div id="next-round-result" class="min-h-[160px] flex flex-col items-center justify-center mb-10 bg-white/5 rounded-2xl p-6"><p class="text-stone-400 italic opacity-50">Toss the caber to see who buys...</p></div><button onclick="pickNextRoundSponsor()" class="golf-gradient w-full py-7 rounded-2xl text-white font-black uppercase tracking-[0.3em] active:scale-95 transition-all text-center">Pick the Host!</button></div>`;
+        }
+
+        function pickNextRoundSponsor() {
+            const unlucky = PLAYERS[Math.floor(Math.random()*PLAYERS.length)];
+            const toast = TOASTS[Math.floor(Math.random()*TOASTS.length)];
+            document.getElementById('next-round-result').innerHTML = `<div class="fade-in text-center"><p class="text-emerald-500 text-[10px] font-bold uppercase mb-3">Our Next Gracious Host is</p><h3 class="serif text-6xl text-white font-bold italic mb-5">${FULL_NAMES[unlucky]}</h3><div class="max-w-xs mx-auto pt-5 border-t border-white/10"><p class="text-stone-400 text-sm leading-relaxed italic">"${toast}"</p></div></div>`;
+        }
+
         function switchCourse(id) {
             if (!id) return;
-            state.isGlobalLedger = false;
+            state.activeTab = 'matches';
             state.currentCourseId = id;
             const course = state.matches.find(c => c.id === id);
-
-            // Update active tab styles
-            document.querySelectorAll('.course-tab').forEach(el => {
-                el.classList.remove('tab-active');
-                el.classList.remove('text-stone-900');
-            });
-            const activeTab = document.getElementById('tab-' + id);
-            if(activeTab) {
-                activeTab.classList.add('tab-active');
-                activeTab.classList.add('text-stone-900');
-            }
-
+            clearTabs();
+            const tab = document.getElementById('tab-' + id);
+            if(tab) tab.classList.add('tab-active', 'text-stone-900');
             document.getElementById('score-banner').classList.remove('hidden');
-            document.getElementById('juice-subtitle').innerText = "Round Bets ($)";
-
-            // Build Holes
-            let holesHtml = '';
-            if (course.holes && course.holes.length > 0) {
-                course.holes.forEach(h => {
-                    const holeNum = h.number;
-                    const savedVal = (state.matchData[id] && state.matchData[id][holeNum]) || "";
-                    holesHtml += `
-                        <div class="p-5 bg-white border-b flex justify-between items-center hover:bg-stone-50">
-                            <div class="flex items-center gap-4">
-                                <span class="font-black text-stone-200 text-4xl italic">#${holeNum}</span>
-                                <div>
-                                    <p class="text-xs font-black uppercase text-stone-800 tracking-tighter mb-1">Par ${h.par} • ${h.yardage} Yds</p>
-                                    <p class="text-[11px] text-stone-600 leading-snug max-w-[200px]"><strong>${h.name || `Hole ${holeNum}`}:</strong> ${h.tip}</p>
-                                </div>
-                            </div>
-                            <select onchange="recordPoint('${id}', ${holeNum}, this.value)" class="text-[10px] font-black border-2 border-stone-200 rounded-lg px-2 py-2 w-24 bg-white outline-none">
-                                <option value="">WINNER?</option>
-                                <option value="A" ${savedVal === 'A' ? 'selected' : ''}>${course.teamA}</option>
-                                <option value="B" ${savedVal === 'B' ? 'selected' : ''}>${course.teamB}</option>
-                                <option value="N" ${savedVal === 'N' ? 'selected' : ''}>HALVED</option>
-                            </select>
-                        </div>`;
-                });
-            } else {
-                holesHtml = `<div class="p-6 text-center text-stone-500 font-medium">Hole data is updating...</div>`;
-            }
-
-            // Build Video Block
-            let videoHtml = '';
-            if (course.video) {
-                videoHtml = `
-                    <div class="relative w-full pt-[56.25%] bg-stone-900 border-b border-stone-200">
-                        <iframe class="absolute inset-0 w-full h-full" src="${course.video}" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                    </div>`;
-            }
-
-            // Inject Content
-            document.getElementById('course-content').innerHTML = `
-                <div class="bg-white rounded-3xl shadow-xl overflow-hidden mb-4 border border-stone-200 fade-in">
-                    ${videoHtml}
-                    <div class="p-6 bg-stone-50 border-b flex justify-between items-end">
-                        <div>
-                            <h2 class="serif text-3xl text-stone-900 mb-1 font-bold">${course.course}</h2>
-                            <p class="text-xs text-stone-400 font-bold uppercase tracking-widest">${course.matchUp}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-xs text-stone-400 font-bold uppercase tracking-widest">${course.date}</p>
-                        </div>
-                    </div>
-                    <div class="divide-y divide-stone-100">${holesHtml}</div>
-                    <div class="p-6">
-                        <button onclick="generateExport()" class="w-full bg-stone-900 text-white py-4 rounded-xl font-bold uppercase tracking-widest active:scale-95 transition">📤 Export Day Recap</button>
-                    </div>
-                </div>`;
-            
-            updateScore(id);
-            setupJuiceHeaders();
+            document.getElementById('juice-section').classList.remove('hidden');
+            let holes = course.holes.map(h => {
+                const s = (state.matchData[id] && state.matchData[id][h.number]) || "";
+                return `<div class="p-5 bg-white border-b flex justify-between items-center"><div class="flex items-center gap-4"><span class="font-black text-stone-200 text-4xl italic">#${h.number}</span><div><p class="text-xs font-black uppercase text-stone-800 tracking-tighter mb-1">Par ${h.par} • ${h.yardage} Yds</p><p class="text-[11px] text-stone-600 leading-snug max-w-[200px]"><strong>${h.name}:</strong> ${h.tip}</p></div></div><select onchange="saveMatchPoint('${id}', ${h.number}, this.value)" class="text-[10px] font-black border-2 border-stone-200 rounded-lg px-2 py-2 w-24 bg-white outline-none"><option value="">WINNER?</option><option value="A" ${s==='A'?'selected':''}>${course.teamA}</option><option value="B" ${s==='B'?'selected':''}>${course.teamB}</option><option value="N" ${s==='N'?'selected':''}>HALVED</option></select></div>`;
+            }).join('');
+            document.getElementById('course-content').innerHTML = `<div class="bg-white rounded-3xl shadow-xl overflow-hidden mb-4 border border-stone-200 fade-in"><div class="relative w-full pt-[56.25%] bg-stone-900"><iframe class="absolute inset-0 w-full h-full" src="${course.video}" frameborder="0" allowfullscreen></iframe></div><div class="p-6 bg-stone-50 border-b flex justify-between items-end"><div><h2 class="serif text-3xl text-stone-900 mb-1 font-bold">${course.course}</h2><p class="text-xs text-stone-400 font-bold uppercase tracking-widest">${course.matchUp}</p></div><div class="text-right"><p class="text-xs text-stone-400 font-bold uppercase tracking-widest">${course.date}</p></div></div><div class="divide-y divide-stone-100">${holes}</div></div>`;
+            updateScore();
             renderJuiceTable();
-            window.scrollTo(0,0);
         }
 
         function viewLedger() {
-            state.isGlobalLedger = true;
-            document.querySelectorAll('.course-tab').forEach(t => t.classList.remove('tab-active'));
+            state.activeTab = 'ledger';
+            clearTabs();
             document.getElementById('tab-ledger').classList.add('tab-active');
-            
-            document.getElementById('score-banner').classList.add('hidden');
-            document.getElementById('juice-subtitle').innerText = "Tour Aggregate Ledger ($)";
-            
-            document.getElementById('course-content').innerHTML = `
-                <div class="bg-white rounded-3xl shadow-xl overflow-hidden mb-4 border-2 border-amber-400 fade-in">
-                    <div class="p-10 text-center bg-amber-50">
-                        <h2 class="serif text-4xl text-amber-900 mb-2 font-bold italic">Tour Ledger</h2>
-                        <p class="text-xs text-amber-700 font-bold uppercase tracking-[0.2em]">Combined Standings</p>
-                    </div>
-                </div>`;
-            
-            setupJuiceHeaders();
+            document.getElementById('juice-section').classList.remove('hidden');
+            document.getElementById('course-content').innerHTML = `<div class="bg-white rounded-3xl shadow-xl overflow-hidden mb-4 border-2 border-amber-400 fade-in"><div class="p-10 text-center bg-amber-50"><h2 class="serif text-4xl text-amber-900 mb-2 font-bold italic">Tour Ledger</h2><p class="text-xs text-amber-700 font-bold uppercase tracking-[0.2em]">Combined Standings</p></div></div>`;
             renderJuiceTable();
         }
 
-        // --- 6. MATCH SCORING & JUICE ---
-        function recordPoint(courseId, holeNum, val) {
-            if(!state.matchData[courseId]) state.matchData[courseId] = {};
-            state.matchData[courseId][holeNum] = val;
-            updateScore(courseId);
-        }
-
-        function updateScore(courseId) {
-            let a = 0, b = 0;
-            const data = state.matchData[courseId] || {};
-            Object.values(data).forEach(v => { if(v==='A') a++; if(v==='B') b++; });
-            
+        function updateScore() {
+            if (state.activeTab !== 'matches') return;
+            let a=0, b=0; const d=state.matchData[state.currentCourseId]||{};
+            Object.values(d).forEach(v=>{if(v==='A')a++;if(v==='B')b++;});
+            const c = state.matches.find(m=>m.id===state.currentCourseId);
             const sb = document.getElementById('display-score');
-            const course = state.matches.find(c => c.id === courseId);
-            
-            if (!course) return;
-
-            if (a === b) {
-                sb.innerText = "ALL SQUARE";
-            } else {
-                const leader = a > b ? course.teamA : course.teamB;
-                sb.innerText = leader + " +" + Math.abs(a - b);
-            }
-        }
-
-        function setupJuiceHeaders() {
-            let headerHtml = `<th class="p-3 w-16"></th>`;
-            PLAYERS.forEach(p => {
-                headerHtml += `<th class="p-3 text-center bg-stone-50">${p}</th>`;
-            });
-            document.getElementById('juice-table-header').innerHTML = headerHtml;
+            if (a===b) sb.innerText="ALL SQUARE"; else sb.innerText=(a>b?c.teamA:c.teamB)+" +"+Math.abs(a-b);
         }
 
         function renderJuiceTable() {
-            const table = document.getElementById('juice-table');
-            const targetId = state.isGlobalLedger ? 'global' : state.currentCourseId;
+            const h = document.getElementById('juice-table-header');
+            h.innerHTML = `<th class="p-3 w-16"></th>` + PLAYERS.map(p=>`<th class="p-3 text-center bg-stone-50">${p}</th>`).join('');
+            const t = document.getElementById('juice-table');
             let html = '';
-
             PLAYERS.forEach(r => {
                 html += `<tr class="border-b border-stone-50"><td class="p-3 font-bold bg-stone-50 text-stone-500 border-r">${r}</td>`;
                 PLAYERS.forEach(c => {
-                    if (r === c) {
-                        html += `<td class="p-2 bg-stone-200/30"></td>`;
-                    } else {
-                        const betId = `${c}-${r}`; // Column player owes Row player? Or Vice Versa. It's symmetrical.
-                        if (state.isGlobalLedger) {
-                            let total = 0;
-                            Object.keys(state.sideBets).forEach(crs => {
-                                if (state.sideBets[crs][betId] && state.sideBets[crs][betId].won) total += state.sideBets[crs][betId].amount;
-                            });
-                            html += `<td class="p-2 text-center border-r"><div class="text-[10px] font-bold text-stone-400">TOTAL</div><div class="text-sm font-black">$${total}</div></td>`;
+                    if (r === c) html += `<td class="p-2 bg-stone-200/30"></td>`;
+                    else {
+                        const bid = `${c}-${r}`;
+                        if (state.activeTab === 'ledger') {
+                            let tot = 0; Object.keys(state.sideBets).forEach(crs=>{if(state.sideBets[crs][bid]?.won)tot+=state.sideBets[crs][bid].amount;});
+                            html += `<td class="p-2 text-center border-r"><div class="text-[10px] font-bold text-stone-400">TOTAL</div><div class="text-sm font-black">$${tot}</div></td>`;
                         } else {
-                            const saved = (state.sideBets[targetId] && state.sideBets[targetId][betId]) || { amount: 0, won: false };
-                            html += `
-                                <td class="p-2 text-center border-r">
-                                    <div class="flex items-center bg-stone-100 rounded mb-1 px-1">
-                                        <span class="text-[10px] font-bold text-stone-400">$</span>
-                                        <input type="number" value="${saved.amount || ''}" class="w-full text-center bg-transparent text-sm py-1.5 font-bold focus:outline-none" onchange="updateBet('${betId}', this.value, null)">
-                                    </div>
-                                    <label class="flex items-center justify-center cursor-pointer">
-                                        <input type="checkbox" ${saved.won ? 'checked' : ''} onchange="updateBet('${betId}', null, this.checked)">
-                                        <span class="text-[8px] font-black uppercase text-stone-400 ml-1">WON</span>
-                                    </label>
-                                </td>`;
+                            const s = (state.sideBets[state.currentCourseId]&&state.sideBets[state.currentCourseId][bid])||{amount:0,won:false};
+                            html += `<td class="p-2 text-center border-r"><div class="flex items-center bg-stone-100 rounded mb-1 px-1"><span class="text-[10px] font-bold text-stone-400">$</span><input type="number" value="${s.amount||''}" onchange="saveSideBet('${bid}', this.value, null)" class="w-full text-center bg-transparent text-sm py-1.5 font-bold outline-none"></div><label class="flex items-center justify-center cursor-pointer"><input type="checkbox" ${s.won?'checked':''} onchange="saveSideBet('${bid}', null, this.checked)"><span class="text-[8px] font-black uppercase text-stone-400 ml-1">WON</span></label></td>`;
                         }
                     }
                 });
                 html += `</tr>`;
             });
-            table.innerHTML = html;
-            calcJuice();
-        }
-
-        function updateBet(id, amt, won) {
-            const courseId = state.currentCourseId;
-            if(!state.sideBets[courseId]) state.sideBets[courseId] = {};
-            if(!state.sideBets[courseId][id]) state.sideBets[courseId][id] = { amount: 0, won: false };
-            if(amt !== null) state.sideBets[courseId][id].amount = parseFloat(amt) || 0;
-            if(won !== null) state.sideBets[courseId][id].won = won;
+            t.innerHTML = html;
             calcJuice();
         }
 
         function calcJuice() {
-            let res = {};
-            PLAYERS.forEach(p => res[p] = 0);
-
-            const pool = state.isGlobalLedger ? Object.keys(state.sideBets) : [state.currentCourseId];
+            let res = {}; PLAYERS.forEach(p=>res[p]=0);
+            const pool = state.activeTab==='ledger' ? Object.keys(state.sideBets) : [state.currentCourseId];
             pool.forEach(c => {
-                const round = state.sideBets[c] || {};
-                Object.keys(round).forEach(id => {
+                const rnd = state.sideBets[c] || {};
+                Object.keys(rnd).forEach(id => {
                     const [w, l] = id.split('-');
-                    if(round[id].won) { 
-                        if(res[w] !== undefined) res[w] += round[id].amount; 
-                        if(res[l] !== undefined) res[l] -= round[id].amount; 
-                    }
+                    if(rnd[id].won) { res[w] += rnd[id].amount; res[l] -= rnd[id].amount; }
                 });
             });
-            
-            document.getElementById('juice-totals').innerHTML = PLAYERS.map(p => `
-                <div class="bg-stone-900 p-4 rounded-2xl text-center shadow-lg">
-                    <span class="block text-[10px] text-stone-400 font-bold mb-1 uppercase tracking-widest">${p}</span>
-                    <span class="text-xl font-black ${res[p] >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${res[p] >= 0 ? '+$' : '-$'}${Math.abs(res[p])}</span>
-                </div>
-            `).join('');
+            document.getElementById('juice-totals').innerHTML = PLAYERS.map(p => `<div class="bg-stone-900 p-4 rounded-2xl text-center shadow-lg"><span class="block text-[10px] text-stone-400 font-bold mb-1 uppercase tracking-widest">${p}</span><span class="text-xl font-black ${res[p]>=0?'text-emerald-400':'text-rose-400'}">${res[p]>=0?'+$':'-$'}${Math.abs(res[p])}</span></div>`).join('');
         }
 
-        // --- 7. ITINERARY ENGINE ---
         function renderItineraryNav() {
-            let html = '';
-            state.itinerary.forEach((d, i) => {
-                html += `<button onclick="setDay(${i})" class="px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition border ${state.currentDayIdx === i ? 'bg-white text-emerald-950 border-white shadow-md scale-105' : 'bg-transparent text-emerald-100 border-emerald-800 hover:bg-emerald-900'}">${d.date}</button>`;
-            });
-            document.getElementById('itinerary-tabs').innerHTML = html;
+            document.getElementById('itinerary-tabs').innerHTML = state.itinerary.map((d,i)=>`<button onclick="setDay(${i})" class="px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition border ${state.currentDayIdx===i?'bg-white text-emerald-950 border-white shadow-md scale-105':'bg-transparent text-emerald-100 border-emerald-800 hover:bg-emerald-900'}">${d.date}</button>`).join('');
         }
 
-        function setDay(i) {
-            state.currentDayIdx = i;
-            renderItineraryNav();
-            renderItineraryContent();
-        }
+        window.setDay = (i) => { state.currentDayIdx=i; renderItineraryNav(); renderItineraryContent(); };
 
         function renderItineraryContent() {
-            const data = state.itinerary[state.currentDayIdx];
-            if (!data) return;
-            
-            // Generate Golf HTML
-            let golfHtml = '';
-            if (data.golf && data.golf.length > 0) {
-                let itemsHtml = '';
-                data.golf.forEach(g => {
-                    itemsHtml += `
-                        <button onclick="jumpToMatch('${g.matchId}')" class="w-full text-left flex justify-between items-center bg-emerald-800 hover:bg-emerald-700 focus:bg-emerald-600 rounded-xl p-4 mb-3 shadow-md border border-emerald-600 transition-all group active:scale-[0.98]">
-                            <div>
-                                <h4 class="font-bold text-lg text-white group-hover:text-emerald-50 transition-colors">${g.course}</h4>
-                                <div class="flex items-center gap-1 text-emerald-300 text-xs font-bold uppercase tracking-widest mt-1">
-                                    <span class="text-amber-400">⛳️ TEE TIME:</span> ${g.time}
-                                </div>
-                            </div>
-                            <div class="bg-emerald-950 text-emerald-100 rounded-full w-8 h-8 flex items-center justify-center group-hover:bg-emerald-900 transition-colors">
-                                <span class="group-hover:translate-x-1 transition-transform">→</span>
-                            </div>
-                        </button>`;
-                });
-                golfHtml = `
-                    <div class="bg-emerald-900 text-white rounded-2xl shadow-lg overflow-hidden mb-6">
-                        <div class="px-5 py-4 border-b border-emerald-800 flex items-center space-x-2">
-                            ${SVG_FLAG} <h3 class="font-serif font-bold text-xl">The Golf</h3>
-                        </div>
-                        <div class="p-3 pb-1">${itemsHtml}</div>
-                    </div>`;
-            }
-
-            // Generate Schedule HTML
-            let schedHtml = '';
-            if (data.schedule && data.schedule.length > 0) {
-                data.schedule.forEach(s => {
-                    schedHtml += `
-                        <div class="flex items-start">
-                            <div class="w-24 flex-shrink-0 text-xs font-bold text-stone-500 pt-1">${s.time}</div>
-                            <div class="flex-grow pl-4 border-l-2 border-emerald-100 text-stone-800 font-medium">${s.event}</div>
-                        </div>`;
-                });
-                schedHtml = `
-                    <div class="bg-white rounded-2xl border border-stone-100 p-5 mb-6 shadow-sm">
-                        <h3 class="font-serif font-bold text-xl mb-4 text-stone-900 border-b border-stone-100 pb-2">Schedule</h3>
-                        <div class="space-y-4">${schedHtml}</div>
-                    </div>`;
-            }
-
-            // Generate Hotspots
-            let hotspotsHtml = '';
-            if (data.intel.hotspots && data.intel.hotspots.length > 0) {
-                let pills = data.intel.hotspots.map(h => `<span class="bg-white text-amber-900 px-3 py-1 rounded-full text-[10px] font-black border border-amber-200 shadow-sm flex items-center"><span class="text-amber-500 mr-1">•</span> ${h}</span>`).join('');
-                hotspotsHtml = `
-                    <div class="mt-4 pt-4 border-t border-amber-200/60">
-                        <h4 class="text-[10px] uppercase tracking-widest font-black text-amber-700/60 mb-2">Notable Spots</h4>
-                        <div class="flex flex-wrap gap-2">${pills}</div>
-                    </div>`;
-            }
-
-            // Build Final Card
-            document.getElementById('itinerary-content').innerHTML = `
-                <div class="bg-white rounded-3xl shadow-xl border border-stone-200 p-6 md:p-10 fade-in" id="swipe-area">
-                    
-                    <div class="flex justify-between items-center mb-6 border-b border-stone-100 pb-4">
-                        <div>
-                            <h2 class="serif text-3xl md:text-4xl font-bold text-stone-900">${data.day}</h2>
-                            <p class="text-emerald-700 font-bold uppercase tracking-widest text-xs mt-1">${data.date}</p>
-                        </div>
-                        <div class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">Day ${state.currentDayIdx + 1}</div>
-                    </div>
-
-                    <!-- Daily Quote -->
-                    <div class="mb-8 border-l-4 border-amber-400 pl-5 py-2 bg-stone-50 rounded-r-xl pr-4">
-                        <p class="serif text-lg italic text-stone-700 leading-snug mb-2">"${data.quote}"</p>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4 mb-6">
-                        <div class="bg-stone-50 p-4 rounded-2xl border border-stone-100 flex items-center space-x-3">
-                            <div class="text-amber-500">${SVG_SUNRISE}</div>
-                            <div>
-                                <p class="text-[9px] text-stone-400 uppercase tracking-widest font-bold">Wake Up</p>
-                                <p class="font-bold text-stone-800">${data.wakeUp}</p>
-                            </div>
-                        </div>
-                        <div class="bg-stone-50 p-4 rounded-2xl border border-stone-100 flex items-center space-x-3">
-                            <div class="text-indigo-500">${SVG_MOON}</div>
-                            <div>
-                                <p class="text-[9px] text-stone-400 uppercase tracking-widest font-bold">Sleep In</p>
-                                <p class="font-bold text-stone-800">${data.sleep}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    ${golfHtml}
-                    ${schedHtml}
-
-                    <div class="bg-gradient-to-br from-amber-50 to-orange-50/50 rounded-2xl border border-amber-200/60 p-6 shadow-sm">
-                        <div class="flex items-center space-x-2 mb-2 text-amber-800">
-                            ${SVG_INFO}
-                            <h3 class="font-serif font-bold text-xl">City Guide: ${data.intel.city}</h3>
-                        </div>
-                        <p class="text-stone-600 text-sm leading-relaxed font-medium">${data.intel.description}</p>
-                        
-                        <div class="mt-4 pt-4 border-t border-amber-200/60">
-                            <p class="text-stone-800 font-medium flex items-center text-sm">
-                                <span class="text-emerald-600 mr-2 font-bold uppercase tracking-widest text-[10px]">Hotel:</span>
-                                ${data.intel.hotel}
-                            </p>
-                        </div>
-                        
-                        ${hotspotsHtml}
-                    </div>
-                </div>`;
+            const d = state.itinerary[state.currentDayIdx]; if(!d) return;
+            let golf = d.golf.length>0 ? `<div class="bg-emerald-900 text-white rounded-2xl shadow-lg overflow-hidden mb-6"><div class="px-5 py-4 border-b border-emerald-800 flex items-center space-x-2"><h3 class="font-serif font-bold text-xl">The Golf</h3></div><div class="p-3">${d.golf.map(g=>`<button onclick="jumpToMatch('${g.matchId}')" class="w-full text-left flex justify-between items-center bg-emerald-800 rounded-xl p-4 mb-3 shadow-md border border-emerald-600"><div><h4 class="font-bold text-lg text-white">${g.course}</h4><div class="text-emerald-300 text-xs font-bold uppercase mt-1"><span class="text-amber-400">⛳️ TEE:</span> ${g.time}</div></div><div class="bg-emerald-950 rounded-full w-8 h-8 flex items-center justify-center">→</div></button>`).join('')}</div></div>` : '';
+            document.getElementById('itinerary-content').innerHTML = `<div class="bg-white rounded-3xl shadow-xl border border-stone-200 p-6 md:p-10 fade-in"><div class="flex justify-between items-center mb-6 border-b border-stone-100 pb-4"><div><h2 class="serif text-3xl md:text-4xl font-bold text-stone-900">${d.day}</h2><p class="text-emerald-700 font-bold uppercase tracking-widest text-xs mt-1">${d.date}</p></div><div class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">Day ${state.currentDayIdx+1}</div></div><div class="mb-8 border-l-4 border-amber-400 pl-5 py-2 bg-stone-50 rounded-r-xl pr-4"><p class="serif text-lg italic text-stone-700 leading-snug">"${d.quote}"</p></div><div class="grid grid-cols-2 gap-4 mb-6"><div class="bg-stone-50 p-4 rounded-2xl border border-stone-100 flex items-center space-x-3"><div class="text-amber-500">☀️</div><div><p class="text-[9px] text-stone-400 uppercase tracking-widest font-bold">Wake Up</p><p class="font-bold text-stone-800">${d.wakeUp}</p></div></div><div class="bg-stone-50 p-4 rounded-2xl border border-stone-100 flex items-center space-x-3"><div class="text-indigo-500">🌙</div><div><p class="text-[9px] text-stone-400 uppercase tracking-widest font-bold">Sleep In</p><p class="font-bold text-stone-800">${d.sleep}</p></div></div></div>${golf}<div class="bg-gradient-to-br from-amber-50 to-orange-50/50 rounded-2xl border border-amber-200/60 p-6 shadow-sm"><div class="flex items-center space-x-2 mb-2 text-amber-800"><h3 class="font-serif font-bold text-xl">City Guide: ${d.intel.city}</h3></div><p class="text-stone-600 text-sm leading-relaxed font-medium mb-4">${d.intel.description}</p><div class="border-t border-amber-200/60 pt-4"><p class="text-stone-800 font-medium text-sm"><span class="text-emerald-600 mr-2 font-bold uppercase text-[10px]">Hotel:</span>${d.intel.hotel}</p></div></div></div>`;
         }
 
-        // Swipe logic for the itinerary
-        function attachSwipeListeners() {
-            const container = document.querySelector('.swipe-container');
-            if (!container) return;
+        window.jumpToMatch = (id) => { state.currentCourseId=id; navigateTo('matches'); };
 
-            let touchStartX = 0;
-            let touchEndX = 0;
-
-            // Remove old listeners to avoid duplicates
-            const newContainer = container.cloneNode(true);
-            container.parentNode.replaceChild(newContainer, container);
-
-            newContainer.addEventListener('touchstart', e => {
-                touchStartX = e.changedTouches[0].screenX;
-            }, {passive: true});
-
-            newContainer.addEventListener('touchend', e => {
-                touchEndX = e.changedTouches[0].screenX;
-                handleSwipe();
-            }, {passive: true});
-
-            function handleSwipe() {
-                const threshold = 50;
-                if (touchEndX < touchStartX - threshold && state.currentDayIdx < state.itinerary.length - 1) {
-                    setDay(state.currentDayIdx + 1); // Swipe left (next)
-                }
-                if (touchEndX > touchStartX + threshold && state.currentDayIdx > 0) {
-                    setDay(state.currentDayIdx - 1); // Swipe right (prev)
-                }
-            }
+        // Logic to refresh the UI when data comes in
+        function render() {
+            if (state.activeTab === 'belt') viewBeltPoints();
+            else if (state.activeTab === 'ledger') viewLedger();
+            else if (state.activeTab === 'matches') switchCourse(state.currentCourseId);
         }
 
-        // --- 8. EXPORT LOGIC ---
-        function generateExport() {
-            const crs = state.matches.find(c => c.id === state.currentCourseId);
-            if (!crs) return;
-
-            const score = document.getElementById('display-score').innerText;
-            
-            let res = {};
-            PLAYERS.forEach(p => res[p] = 0);
-            
-            const round = state.sideBets[state.currentCourseId] || {};
-            Object.keys(round).forEach(id => {
-                const [w, l] = id.split('-');
-                if(round[id].won) { 
-                    if(res[w] !== undefined) res[w] += round[id].amount; 
-                    if(res[l] !== undefined) res[l] -= round[id].amount; 
-                }
-            });
-
-            let text = `⛳️ PRO-LINK TOUR RECAP\n`;
-            text += `COURSE: ${crs.course}\n`;
-            text += `MATCH: ${score}\n\n`;
-            text += `ROUND JUICE LEDGER:\n`;
-            PLAYERS.forEach(p => { 
-                text += `${p}: ${res[p] >= 0 ? '+$' : '-$'}${Math.abs(res[p])}\n`; 
-            });
-
-            document.getElementById('export-text').value = text;
-            document.getElementById('export-modal').classList.remove('hidden');
-        }
-
-        function copyExport() {
-            const txt = document.getElementById('export-text');
-            txt.select();
-            document.execCommand('copy');
-            document.getElementById('copy-status').style.opacity = '1';
-            setTimeout(() => { document.getElementById('copy-status').style.opacity = '0'; }, 2000);
-        }
-
-        function closeModal() { 
-            document.getElementById('export-modal').classList.add('hidden'); 
-        }
-
-        // --- 9. BOOTSTRAP ---
-        fetchGoogleSheetsData();
-
+        fetchInitialData();
     </script>
 </body>
 </html>
-```
