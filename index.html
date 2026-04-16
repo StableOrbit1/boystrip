@@ -210,76 +210,135 @@
 
         // --- 2. DATA PIPELINE ---
 
-        // Enhanced fetch helper to specifically target GAS issues
-        // We remove explicit 'mode' and 'cache' headers here as they can trigger a CORS OPTIONS preflight request 
-        // which Google Apps Script does not support. We rely on the URL cache-buster string instead.
         async function fetchLiveStorage(url) {
             try {
                 const response = await fetch(url + "?nocache=" + Date.now());
-                
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                
-                return await response.json();
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                return data;
             } catch (error) {
                 console.error("Fetch failed:", error);
                 throw error;
             }
         }
 
+        function parseCSVData(url) {
+            return new Promise((resolve, reject) => {
+                Papa.parse(url, {
+                    download: true,
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: (results) => resolve(results.data),
+                    error: (err) => reject(err)
+                });
+            });
+        }
+
         async function fetchInitialData() {
             const subtext = document.getElementById('loading-subtext');
             try {
-                if (subtext) subtext.innerText = "Fetching Itinerary & Course Data...";
-                const fetchCSV = (url) => new Promise((res, rej) => Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => res(r.data), error: rej }));
-                const [itn, mtch, hls] = await Promise.all([fetchCSV(sheetUrls.itinerary), fetchCSV(sheetUrls.matches), fetchCSV(sheetUrls.holes)]);
+                if (subtext) {
+                    subtext.innerText = "Fetching Itinerary & Course Data...";
+                }
+                
+                const [itn, mtch, hls] = await Promise.all([
+                    parseCSVData(sheetUrls.itinerary),
+                    parseCSVData(sheetUrls.matches),
+                    parseCSVData(sheetUrls.holes)
+                ]);
 
                 state.matches = mtch.map(m => {
                     const mId = String(m.matchId || m.id || '').trim();
                     return {
-                        id: mId, course: m.course, date: m.date, matchUp: m.matchUp, teeTime: m.teeTime || 'TBD',
-                        teamA: m.teamA || 'Team A', teamB: m.teamB || 'Team B', video: formatYouTubeUrl(m.video),
+                        id: mId, 
+                        course: m.course, 
+                        date: m.date, 
+                        matchUp: m.matchUp, 
+                        teeTime: m.teeTime || 'TBD',
+                        teamA: m.teamA || 'Team A', 
+                        teamB: m.teamB || 'Team B', 
+                        video: formatYouTubeUrl(m.video),
                         holes: hls.filter(h => String(h.matchId || h.id).trim() === mId).map(h => ({
-                            number: parseInt(h.number), name: h.name, par: parseInt(h.par), yardage: parseInt(h.yardage), tip: h.tip
+                            number: parseInt(h.number), 
+                            name: h.name, 
+                            par: parseInt(h.par), 
+                            yardage: parseInt(h.yardage), 
+                            tip: h.tip
                         }))
                     };
                 });
 
-                state.itinerary = itn.map(day => ({
-                    day: day.day, date: day.date, quote: day.quote, wakeUp: day.wakeUp, sleep: day.sleep,
-                    golf: state.matches.filter(m => {
+                state.itinerary = itn.map(day => {
+                    const mappedGolf = state.matches.filter(m => {
                         const mDate = String(m.date).toLowerCase().trim();
                         const iDate = String(day.date).toLowerCase().trim();
                         return mDate.includes(iDate) || iDate.includes(mDate);
-                    }).map(m => ({ course: m.course, time: m.teeTime, matchId: m.id })),
-                    intel: { city: day.intel_city, description: day.intel_desc, hotel: day.intel_hotel, hotspots: day.intel_hotspots ? day.intel_hotspots.split('|') : [] }
-                }));
+                    }).map(m => ({ 
+                        course: m.course, 
+                        time: m.teeTime, 
+                        matchId: m.id 
+                    }));
 
-                if (state.matches.length > 0) state.currentCourseId = state.matches[0].id;
+                    return {
+                        day: day.day, 
+                        date: day.date, 
+                        quote: day.quote, 
+                        wakeUp: day.wakeUp, 
+                        sleep: day.sleep,
+                        golf: mappedGolf,
+                        intel: { 
+                            city: day.intel_city, 
+                            description: day.intel_desc, 
+                            hotel: day.intel_hotel, 
+                            hotspots: day.intel_hotspots ? day.intel_hotspots.split('|') : [] 
+                        }
+                    };
+                });
 
-                if (subtext) subtext.innerText = "Loading Live Scores...";
+                if (state.matches.length > 0) {
+                    state.currentCourseId = state.matches[0].id;
+                }
+
+                if (subtext) {
+                    subtext.innerText = "Loading Live Scores...";
+                }
                 
                 try {
                     const data = await fetchLiveStorage(GAS_WEB_APP_URL);
                     if (Array.isArray(data)) {
                         data.forEach(row => {
                             if (row.category === 'matchData') {
-                                if (!state.matchData[row.courseId]) state.matchData[row.courseId] = {};
+                                if (!state.matchData[row.courseId]) {
+                                    state.matchData[row.courseId] = {};
+                                }
                                 state.matchData[row.courseId][row.key] = row.value;
                             } else if (row.category === 'sideBets') {
-                            if (!state.sideBets[row.courseId]) state.sideBets[row.courseId] = {};
-                            try { state.sideBets[row.courseId][row.key] = JSON.parse(row.value); } catch(e) {}
-                        } else if (row.category === 'beltPoints') {
-                            if (!state.beltPoints[row.courseId]) state.beltPoints[row.courseId] = {};
-                            state.beltPoints[row.courseId][row.key] = row.value;
-                        } else if (row.category === 'finalScores') {
-                            if (!state.finalScores[row.courseId]) state.finalScores[row.courseId] = {};
-                            state.finalScores[row.courseId][row.key] = row.value;
-                        } else if (row.category === 'handicaps') {
-                            if (!state.handicaps[row.courseId]) state.handicaps[row.courseId] = {};
-                            state.handicaps[row.courseId][row.key] = row.value;
-                        }
-                    });
-                }
+                                if (!state.sideBets[row.courseId]) {
+                                    state.sideBets[row.courseId] = {};
+                                }
+                                try { 
+                                    state.sideBets[row.courseId][row.key] = JSON.parse(row.value); 
+                                } catch(parseError) {
+                                    console.warn("Could not parse sideBets json");
+                                }
+                            } else if (row.category === 'beltPoints') {
+                                if (!state.beltPoints[row.courseId]) {
+                                    state.beltPoints[row.courseId] = {};
+                                }
+                                state.beltPoints[row.courseId][row.key] = row.value;
+                            } else if (row.category === 'finalScores') {
+                                if (!state.finalScores[row.courseId]) {
+                                    state.finalScores[row.courseId] = {};
+                                }
+                                state.finalScores[row.courseId][row.key] = row.value;
+                            } else if (row.category === 'handicaps') {
+                                if (!state.handicaps[row.courseId]) {
+                                    state.handicaps[row.courseId] = {};
+                                }
+                                state.handicaps[row.courseId][row.key] = row.value;
+                            }
                         });
                     }
                 } catch (liveError) {
@@ -296,7 +355,9 @@
 
             } catch (e) { 
                 console.error("Critical Load Error:", e); 
-                if (subtext) subtext.innerHTML = `<span class="text-red-500">Critical Error. Check CSV Public Access.</span>`;
+                if (subtext) {
+                    subtext.innerHTML = `<span class="text-red-500">Critical Error. Check CSV Public Access.</span>`;
+                }
             }
         }
 
@@ -309,7 +370,6 @@
             }
 
             try {
-                // 'no-cors' prevents preflight checks. We are sending standard stringified JSON.
                 await fetch(GAS_WEB_APP_URL, {
                     method: 'POST',
                     mode: 'no-cors',
@@ -334,7 +394,9 @@
 
         // --- 3. CLOUD SAVE WRAPPERS ---
         function saveMatchPoint(crsId, hole, val) {
-            if (!state.matchData[crsId]) state.matchData[crsId] = {};
+            if (!state.matchData[crsId]) {
+                state.matchData[crsId] = {};
+            }
             state.matchData[crsId][hole] = val;
             postToSheet({ category: 'matchData', courseId: crsId, key: String(hole), value: val });
             updateScore();
@@ -342,30 +404,44 @@
 
         function saveSideBet(betId, amt, won) {
             const cId = state.currentCourseId;
-            if (!state.sideBets[cId]) state.sideBets[cId] = {};
-            if (!state.sideBets[cId][betId]) state.sideBets[cId][betId] = { amount: 0, won: false };
-            if (amt !== null) state.sideBets[cId][betId].amount = parseFloat(amt) || 0;
-            if (won !== null) state.sideBets[cId][betId].won = won;
+            if (!state.sideBets[cId]) {
+                state.sideBets[cId] = {};
+            }
+            if (!state.sideBets[cId][betId]) {
+                state.sideBets[cId][betId] = { amount: 0, won: false };
+            }
+            if (amt !== null) {
+                state.sideBets[cId][betId].amount = parseFloat(amt) || 0;
+            }
+            if (won !== null) {
+                state.sideBets[cId][betId].won = won;
+            }
             postToSheet({ category: 'sideBets', courseId: cId, key: betId, value: JSON.stringify(state.sideBets[cId][betId]) });
             renderJuiceTable();
         }
 
         function saveBeltScore(crsId, player, val) {
-            if (!state.beltPoints[crsId]) state.beltPoints[crsId] = {};
+            if (!state.beltPoints[crsId]) {
+                state.beltPoints[crsId] = {};
+            }
             state.beltPoints[crsId][player] = parseInt(val) || 0;
             postToSheet({ category: 'beltPoints', courseId: crsId, key: player, value: String(val) });
             viewBeltPoints();
         }
 
         function saveFinalScore(crsId, player, val) {
-            if (!state.finalScores[crsId]) state.finalScores[crsId] = {};
+            if (!state.finalScores[crsId]) {
+                state.finalScores[crsId] = {};
+            }
             state.finalScores[crsId][player] = parseInt(val) || 0;
             postToSheet({ category: 'finalScores', courseId: crsId, key: player, value: String(val) });
             renderFinalScores();
         }
 
         function saveHandicap(crsId, player, val) {
-            if (!state.handicaps[crsId]) state.handicaps[crsId] = {};
+            if (!state.handicaps[crsId]) {
+                state.handicaps[crsId] = {};
+            }
             state.handicaps[crsId][player] = parseInt(val) || 0;
             postToSheet({ category: 'handicaps', courseId: crsId, key: player, value: String(val) });
             renderFinalScores();
@@ -375,9 +451,13 @@
         function formatYouTubeUrl(url) {
             if (!url) return '';
             let v = '';
-            if (url.includes('embed/')) v = url.split('embed/')[1].split('?')[0];
-            else if (url.includes('youtu.be/')) v = url.split('youtu.be/')[1].split('?')[0];
-            else if (url.includes('watch?v=')) v = url.split('watch?v=')[1].split('&')[0];
+            if (url.includes('embed/')) {
+                v = url.split('embed/')[1].split('?')[0];
+            } else if (url.includes('youtu.be/')) {
+                v = url.split('youtu.be/')[1].split('?')[0];
+            } else if (url.includes('watch?v=')) {
+                v = url.split('watch?v=')[1].split('&')[0];
+            }
             return v ? `https://www.youtube.com/embed/${v}?autoplay=1&mute=1` : url;
         }
 
@@ -387,10 +467,18 @@
                 if (el) el.classList.add('hidden');
             });
             const target = document.getElementById('view-' + viewId);
-            if (target) target.classList.remove('hidden');
+            if (target) {
+                target.classList.remove('hidden');
+            }
 
-            if (viewId === 'matches') renderMatchesNav(), switchCourse(state.currentCourseId);
-            if (viewId === 'itinerary') renderItineraryNav(), renderItineraryContent();
+            if (viewId === 'matches') {
+                renderMatchesNav();
+                switchCourse(state.currentCourseId);
+            }
+            if (viewId === 'itinerary') {
+                renderItineraryNav();
+                renderItineraryContent();
+            }
             window.scrollTo(0, 0);
         }
 
@@ -415,31 +503,95 @@
             clearTabs();
             state.activeTab = 'belt';
             document.getElementById('tab-belt').classList.add('tab-active');
-            let sums = {}; PLAYERS.forEach(p => sums[p] = 0);
+            let sums = {}; 
+            PLAYERS.forEach(p => sums[p] = 0);
+            
             let rows = state.matches.map(m => {
-                return `<tr class="border-b border-stone-100"><td class="py-4 text-[10px] font-bold text-stone-500 uppercase leading-tight w-24">${m.course}</td>` + 
-                    PLAYERS.map(p => {
-                        const val = (state.beltPoints[m.id] && state.beltPoints[m.id][p]) || 0;
-                        sums[p] += parseInt(val);
-                        return `<td><input type="number" value="${val || ''}" onchange="saveBeltScore('${m.id}', '${p}', this.value)" class="w-full text-center py-2 font-bold focus:ring-2 focus:ring-blue-500 rounded bg-stone-100"></td>`;
-                    }).join('') + `</tr>`;
+                let rowHtml = `<tr class="border-b border-stone-100"><td class="py-4 text-[10px] font-bold text-stone-500 uppercase leading-tight w-24">${m.course}</td>`;
+                PLAYERS.forEach(p => {
+                    const val = (state.beltPoints[m.id] && state.beltPoints[m.id][p]) || 0;
+                    sums[p] += parseInt(val);
+                    rowHtml += `<td><input type="number" value="${val || ''}" onchange="saveBeltScore('${m.id}', '${p}', this.value)" class="w-full text-center py-2 font-bold focus:ring-2 focus:ring-blue-500 rounded bg-stone-100"></td>`;
+                });
+                rowHtml += `</tr>`;
+                return rowHtml;
             }).join('');
-            const sorted = Object.entries(sums).sort((a,b)=>b[1]-a[1]);
-            const ranks = {}; sorted.forEach((e,i)=>ranks[e[0]]=i+1);
-            document.getElementById('course-content').innerHTML = `<div class="bg-white rounded-3xl shadow-xl overflow-hidden mb-4 border border-blue-200 fade-in"><div class="p-6 bg-blue-50 border-b flex items-center gap-4"><span class="text-3xl">🏆</span><div><h2 class="serif text-2xl text-blue-900 font-bold">Champions Belt</h2><p class="text-[10px] text-blue-700 font-bold uppercase tracking-widest">Net Pars or Better</p></div></div><div class="p-4 overflow-x-auto"><table class="w-full border-collapse"><thead><tr class="text-stone-400 text-[10px] uppercase font-bold border-b"><th class="text-left pb-2">Course</th>${PLAYERS.map(p=>`<th class="pb-2">${p}</th>`).join('')}</tr></thead><tbody>${rows}</tbody><tr class="bg-stone-900 text-white font-black"><td class="p-4 text-[10px] uppercase">Rank</td>${PLAYERS.map(p=>`<td class="text-center"><div class="text-lg">${sums[p]}</div><div class="text-[9px] text-blue-400">${ranks[p]}${['st','nd','rd','th'][ranks[p]-1]}</div></td>`).join('')}</tr></table></div></div>`;
+            
+            const sorted = Object.entries(sums).sort((a,b) => b[1] - a[1]);
+            const ranks = {}; 
+            sorted.forEach((e, i) => ranks[e[0]] = i + 1);
+            
+            let headerRow = PLAYERS.map(p => `<th class="pb-2">${p}</th>`).join('');
+            
+            let footerRow = PLAYERS.map(p => {
+                const rankSuffix = ['st','nd','rd','th'][ranks[p] - 1] || 'th';
+                return `<td class="text-center"><div class="text-lg">${sums[p]}</div><div class="text-[9px] text-blue-400">${ranks[p]}${rankSuffix}</div></td>`;
+            }).join('');
+
+            document.getElementById('course-content').innerHTML = `
+                <div class="bg-white rounded-3xl shadow-xl overflow-hidden mb-4 border border-blue-200 fade-in">
+                    <div class="p-6 bg-blue-50 border-b flex items-center gap-4">
+                        <span class="text-3xl">🏆</span>
+                        <div>
+                            <h2 class="serif text-2xl text-blue-900 font-bold">Champions Belt</h2>
+                            <p class="text-[10px] text-blue-700 font-bold uppercase tracking-widest">Net Pars or Better</p>
+                        </div>
+                    </div>
+                    <div class="p-4 overflow-x-auto">
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr class="text-stone-400 text-[10px] uppercase font-bold border-b">
+                                    <th class="text-left pb-2">Course</th>
+                                    ${headerRow}
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                            <tr class="bg-stone-900 text-white font-black">
+                                <td class="p-4 text-[10px] uppercase">Rank</td>
+                                ${footerRow}
+                            </tr>
+                        </table>
+                    </div>
+                </div>`;
         }
 
         function viewNextRound() {
             clearTabs();
             state.activeTab = 'next';
             document.getElementById('tab-next').classList.add('tab-active');
-            document.getElementById('course-content').innerHTML = `<div class="bg-stone-950 rounded-3xl shadow-2xl p-10 text-center fade-in"><div class="mb-10"><div class="inline-block p-5 rounded-full bg-emerald-500/10 mb-6 border border-emerald-500/20"><svg class="w-16 h-16 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 0 0 2-2l1-13H4l1 13a2 2 0 0 0 2 2Z" stroke-width="1.5"/><path d="M12 6v15" stroke-width="1.5"/><path d="M15 6v15" stroke-width="1.5"/><path d="M9 6v15" stroke-width="1.5"/><path d="M19 6V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v1" stroke-width="1.5"/></svg></div><h2 class="serif text-4xl text-white italic font-bold">The Round Selection</h2><p class="text-stone-500 text-[10px] font-bold uppercase tracking-[0.4em] mt-3">Designating the Patron of the Pub</p></div><div id="next-round-result" class="min-h-[160px] flex flex-col items-center justify-center mb-10 bg-white/5 rounded-2xl p-6"><p class="text-stone-400 italic opacity-50">Toss the caber to see who buys...</p></div><button onclick="pickNextRoundSponsor()" class="golf-gradient w-full py-7 rounded-2xl text-white font-black uppercase tracking-[0.3em] active:scale-95 transition-all text-center">Pick the Host!</button></div>`;
+            document.getElementById('course-content').innerHTML = `
+                <div class="bg-stone-950 rounded-3xl shadow-2xl p-10 text-center fade-in">
+                    <div class="mb-10">
+                        <div class="inline-block p-5 rounded-full bg-emerald-500/10 mb-6 border border-emerald-500/20">
+                            <svg class="w-16 h-16 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path d="M7 21h10a2 2 0 0 0 2-2l1-13H4l1 13a2 2 0 0 0 2 2Z" stroke-width="1.5"/>
+                                <path d="M12 6v15" stroke-width="1.5"/>
+                                <path d="M15 6v15" stroke-width="1.5"/>
+                                <path d="M9 6v15" stroke-width="1.5"/>
+                                <path d="M19 6V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v1" stroke-width="1.5"/>
+                            </svg>
+                        </div>
+                        <h2 class="serif text-4xl text-white italic font-bold">The Round Selection</h2>
+                        <p class="text-stone-500 text-[10px] font-bold uppercase tracking-[0.4em] mt-3">Designating the Patron of the Pub</p>
+                    </div>
+                    <div id="next-round-result" class="min-h-[160px] flex flex-col items-center justify-center mb-10 bg-white/5 rounded-2xl p-6">
+                        <p class="text-stone-400 italic opacity-50">Toss the caber to see who buys...</p>
+                    </div>
+                    <button onclick="pickNextRoundSponsor()" class="golf-gradient w-full py-7 rounded-2xl text-white font-black uppercase tracking-[0.3em] active:scale-95 transition-all text-center">Pick the Host!</button>
+                </div>`;
         }
 
         function pickNextRoundSponsor() {
-            const unlucky = PLAYERS[Math.floor(Math.random()*PLAYERS.length)];
-            const toast = TOASTS[Math.floor(Math.random()*TOASTS.length)];
-            document.getElementById('next-round-result').innerHTML = `<div class="fade-in text-center"><p class="text-emerald-500 text-[10px] font-bold uppercase mb-3">Our Next Gracious Host is</p><h3 class="serif text-6xl text-white font-bold italic mb-5">${FULL_NAMES[unlucky]}</h3><div class="max-w-xs mx-auto pt-5 border-t border-white/10"><p class="text-stone-400 text-sm leading-relaxed italic">"${toast}"</p></div></div>`;
+            const unlucky = PLAYERS[Math.floor(Math.random() * PLAYERS.length)];
+            const toast = TOASTS[Math.floor(Math.random() * TOASTS.length)];
+            document.getElementById('next-round-result').innerHTML = `
+                <div class="fade-in text-center">
+                    <p class="text-emerald-500 text-[10px] font-bold uppercase mb-3">Our Next Gracious Host is</p>
+                    <h3 class="serif text-6xl text-white font-bold italic mb-5">${FULL_NAMES[unlucky]}</h3>
+                    <div class="max-w-xs mx-auto pt-5 border-t border-white/10">
+                        <p class="text-stone-400 text-sm leading-relaxed italic">"${toast}"</p>
+                    </div>
+                </div>`;
         }
 
         function switchCourse(id) {
@@ -447,16 +599,53 @@
             state.activeTab = 'matches';
             state.currentCourseId = id;
             const course = state.matches.find(c => c.id === id);
+            
             clearTabs();
+            
             const tab = document.getElementById('tab-' + id);
-            if(tab) tab.classList.add('tab-active', 'text-stone-900');
+            if (tab) {
+                tab.classList.add('tab-active', 'text-stone-900');
+            }
+            
             document.getElementById('score-banner').classList.remove('hidden');
             document.getElementById('juice-section').classList.remove('hidden');
-            let holes = course.holes.map(h => {
-                const s = (state.matchData[id] && state.matchData[id][h.number]) || "";
-                return `<div class="p-5 bg-white border-b flex justify-between items-center"><div class="flex items-center gap-4"><span class="font-black text-stone-200 text-4xl italic">#${h.number}</span><div><p class="text-xs font-black uppercase text-stone-800 tracking-tighter mb-1">Par ${h.par} • ${h.yardage} Yds</p><p class="text-[11px] text-stone-600 leading-snug max-w-[200px]"><strong>${h.name}:</strong> ${h.tip}</p></div></div><select onchange="saveMatchPoint('${id}', ${h.number}, this.value)" class="text-[10px] font-black border-2 border-stone-200 rounded-lg px-2 py-2 w-24 bg-white outline-none"><option value="">WINNER?</option><option value="A" ${s==='A'?'selected':''}>${course.teamA}</option><option value="B" ${s==='B'?'selected':''}>${course.teamB}</option><option value="N" ${s==='N'?'selected':''}>HALVED</option></select></div>`;
+            
+            let holesHtml = course.holes.map(h => {
+                const selectedVal = (state.matchData[id] && state.matchData[id][h.number]) || "";
+                return `
+                    <div class="p-5 bg-white border-b flex justify-between items-center">
+                        <div class="flex items-center gap-4">
+                            <span class="font-black text-stone-200 text-4xl italic">#${h.number}</span>
+                            <div>
+                                <p class="text-xs font-black uppercase text-stone-800 tracking-tighter mb-1">Par ${h.par} • ${h.yardage} Yds</p>
+                                <p class="text-[11px] text-stone-600 leading-snug max-w-[200px]"><strong>${h.name}:</strong> ${h.tip}</p>
+                            </div>
+                        </div>
+                        <select onchange="saveMatchPoint('${id}', ${h.number}, this.value)" class="text-[10px] font-black border-2 border-stone-200 rounded-lg px-2 py-2 w-24 bg-white outline-none">
+                            <option value="">WINNER?</option>
+                            <option value="A" ${selectedVal === 'A' ? 'selected' : ''}>${course.teamA}</option>
+                            <option value="B" ${selectedVal === 'B' ? 'selected' : ''}>${course.teamB}</option>
+                            <option value="N" ${selectedVal === 'N' ? 'selected' : ''}>HALVED</option>
+                        </select>
+                    </div>`;
             }).join('');
-            document.getElementById('course-content').innerHTML = `<div class="bg-white rounded-3xl shadow-xl overflow-hidden mb-4 border border-stone-200 fade-in"><div class="relative w-full pt-[56.25%] bg-stone-900"><iframe class="absolute inset-0 w-full h-full" src="${course.video}" frameborder="0" allowfullscreen></iframe></div><div class="p-6 bg-stone-50 border-b flex justify-between items-end"><div><h2 class="serif text-3xl text-stone-900 mb-1 font-bold">${course.course}</h2><p class="text-xs text-stone-400 font-bold uppercase tracking-widest">${course.matchUp}</p></div><div class="text-right"><p class="text-xs text-stone-400 font-bold uppercase tracking-widest">${course.date}</p></div></div><div class="divide-y divide-stone-100">${holes}</div></div>`;
+
+            document.getElementById('course-content').innerHTML = `
+                <div class="bg-white rounded-3xl shadow-xl overflow-hidden mb-4 border border-stone-200 fade-in">
+                    <div class="relative w-full pt-[56.25%] bg-stone-900">
+                        <iframe class="absolute inset-0 w-full h-full" src="${course.video}" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                    <div class="p-6 bg-stone-50 border-b flex justify-between items-end">
+                        <div>
+                            <h2 class="serif text-3xl text-stone-900 mb-1 font-bold">${course.course}</h2>
+                            <p class="text-xs text-stone-400 font-bold uppercase tracking-widest">${course.matchUp}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-stone-400 font-bold uppercase tracking-widest">${course.date}</p>
+                        </div>
+                    </div>
+                    <div class="divide-y divide-stone-100">${holesHtml}</div>
+                </div>`;
             
             document.getElementById('final-scores-section').classList.remove('hidden');
             renderFinalScores();
@@ -468,13 +657,17 @@
         function renderFinalScores() {
             const container = document.getElementById('final-scores-container');
             if (!container) return;
+            
             const crsId = state.currentCourseId;
             let html = '<table class="w-full text-xs border-collapse min-w-[300px]">';
             
             html += '<thead><tr class="text-stone-400 border-b"><th class="p-3 w-20 text-left"></th>';
-            PLAYERS.forEach(p => html += `<th class="p-3 text-center bg-stone-50 font-bold text-stone-700">${p}</th>`);
+            PLAYERS.forEach(p => {
+                html += `<th class="p-3 text-center bg-stone-50 font-bold text-stone-700">${p}</th>`;
+            });
             html += '</tr></thead><tbody>';
 
+            // Gross Row
             html += '<tr class="border-b border-stone-100"><td class="p-3 font-bold text-stone-500">Gross</td>';
             PLAYERS.forEach(p => {
                 const gross = (state.finalScores[crsId] && state.finalScores[crsId][p]) || '';
@@ -482,6 +675,7 @@
             });
             html += '</tr>';
 
+            // HDCP Row
             html += '<tr class="border-b border-stone-100"><td class="p-3 font-bold text-stone-500">HDCP</td>';
             PLAYERS.forEach(p => {
                 const hdcp = (state.handicaps[crsId] && state.handicaps[crsId][p]) || '';
@@ -489,6 +683,7 @@
             });
             html += '</tr>';
 
+            // Net Row
             html += '<tr class="bg-emerald-50/30"><td class="p-3 font-bold text-emerald-800">Net</td>';
             PLAYERS.forEach(p => {
                 const gross = parseInt((state.finalScores[crsId] && state.finalScores[crsId][p]) || 0);
@@ -507,38 +702,76 @@
             clearTabs();
             document.getElementById('tab-ledger').classList.add('tab-active');
             document.getElementById('juice-section').classList.remove('hidden');
-            document.getElementById('course-content').innerHTML = `<div class="bg-white rounded-3xl shadow-xl overflow-hidden mb-4 border-2 border-amber-400 fade-in"><div class="p-10 text-center bg-amber-50"><h2 class="serif text-4xl text-amber-900 mb-2 font-bold italic">Tour Ledger</h2><p class="text-xs text-amber-700 font-bold uppercase tracking-[0.2em]">Combined Standings</p></div></div>`;
+            document.getElementById('course-content').innerHTML = `
+                <div class="bg-white rounded-3xl shadow-xl overflow-hidden mb-4 border-2 border-amber-400 fade-in">
+                    <div class="p-10 text-center bg-amber-50">
+                        <h2 class="serif text-4xl text-amber-900 mb-2 font-bold italic">Tour Ledger</h2>
+                        <p class="text-xs text-amber-700 font-bold uppercase tracking-[0.2em]">Combined Standings</p>
+                    </div>
+                </div>`;
             renderJuiceTable();
         }
 
         function updateScore() {
             if (state.activeTab !== 'matches') return;
-            let a=0, b=0; const d=state.matchData[state.currentCourseId]||{};
-            Object.values(d).forEach(v=>{if(v==='A')a++;if(v==='B')b++;});
-            const c = state.matches.find(m=>m.id===state.currentCourseId);
+            
+            let a = 0;
+            let b = 0; 
+            const d = state.matchData[state.currentCourseId] || {};
+            
+            Object.values(d).forEach(v => {
+                if (v === 'A') a++;
+                if (v === 'B') b++;
+            });
+            
+            const c = state.matches.find(m => m.id === state.currentCourseId);
             const sb = document.getElementById('display-score');
+            
             if (!c) return;
-            if (a===b) sb.innerText="ALL SQUARE"; else sb.innerText=(a>b?c.teamA:c.teamB)+" +"+Math.abs(a-b);
+            if (a === b) {
+                sb.innerText = "ALL SQUARE"; 
+            } else {
+                sb.innerText = (a > b ? c.teamA : c.teamB) + " +" + Math.abs(a - b);
+            }
         }
 
         function renderJuiceTable() {
             const h = document.getElementById('juice-table-header');
-            if (h) h.innerHTML = `<th class="p-3 w-16"></th>` + PLAYERS.map(p=>`<th class="p-3 text-center bg-stone-50">${p}</th>`).join('');
+            if (h) {
+                h.innerHTML = `<th class="p-3 w-16"></th>` + PLAYERS.map(p => `<th class="p-3 text-center bg-stone-50">${p}</th>`).join('');
+            }
+            
             const t = document.getElementById('juice-table');
             if (!t) return;
+            
             let html = '';
             PLAYERS.forEach(r => {
                 html += `<tr class="border-b border-stone-50"><td class="p-3 font-bold bg-stone-50 text-stone-500 border-r">${r}</td>`;
                 PLAYERS.forEach(c => {
-                    if (r === c) html += `<td class="p-2 bg-stone-200/30"></td>`;
-                    else {
+                    if (r === c) {
+                        html += `<td class="p-2 bg-stone-200/30"></td>`;
+                    } else {
                         const bid = `${c}-${r}`;
                         if (state.activeTab === 'ledger') {
-                            let tot = 0; Object.keys(state.sideBets).forEach(crs=>{if(state.sideBets[crs][bid]?.won)tot+=state.sideBets[crs][bid].amount;});
+                            let tot = 0; 
+                            Object.keys(state.sideBets).forEach(crs => {
+                                if (state.sideBets[crs][bid]?.won) {
+                                    tot += state.sideBets[crs][bid].amount;
+                                }
+                            });
                             html += `<td class="p-2 text-center border-r"><div class="text-[10px] font-bold text-stone-400">TOTAL</div><div class="text-sm font-black">$${tot}</div></td>`;
                         } else {
-                            const s = (state.sideBets[state.currentCourseId]&&state.sideBets[state.currentCourseId][bid])||{amount:0,won:false};
-                            html += `<td class="p-2 text-center border-r"><div class="flex items-center bg-stone-100 rounded mb-1 px-1"><span class="text-[10px] font-bold text-stone-400">$</span><input type="number" value="${s.amount||''}" onchange="saveSideBet('${bid}', this.value, null)" class="w-full text-center bg-transparent text-sm py-1.5 font-bold outline-none"></div><label class="flex items-center justify-center cursor-pointer"><input type="checkbox" ${s.won?'checked':''} onchange="saveSideBet('${bid}', null, this.checked)"><span class="text-[8px] font-black uppercase text-stone-400 ml-1">WON</span></label></td>`;
+                            const s = (state.sideBets[state.currentCourseId] && state.sideBets[state.currentCourseId][bid]) || {amount:0,won:false};
+                            html += `<td class="p-2 text-center border-r">
+                                <div class="flex items-center bg-stone-100 rounded mb-1 px-1">
+                                    <span class="text-[10px] font-bold text-stone-400">$</span>
+                                    <input type="number" value="${s.amount||''}" onchange="saveSideBet('${bid}', this.value, null)" class="w-full text-center bg-transparent text-sm py-1.5 font-bold outline-none">
+                                </div>
+                                <label class="flex items-center justify-center cursor-pointer">
+                                    <input type="checkbox" ${s.won?'checked':''} onchange="saveSideBet('${bid}', null, this.checked)">
+                                    <span class="text-[8px] font-black uppercase text-stone-400 ml-1">WON</span>
+                                </label>
+                            </td>`;
                         }
                     }
                 });
@@ -549,39 +782,132 @@
         }
 
         function calcJuice() {
-            let res = {}; PLAYERS.forEach(p=>res[p]=0);
-            const pool = state.activeTab==='ledger' ? Object.keys(state.sideBets) : [state.currentCourseId];
+            let res = {}; 
+            PLAYERS.forEach(p => res[p] = 0);
+            
+            const pool = state.activeTab === 'ledger' ? Object.keys(state.sideBets) : [state.currentCourseId];
+            
             pool.forEach(c => {
                 const rnd = state.sideBets[c] || {};
                 Object.keys(rnd).forEach(id => {
                     const [w, l] = id.split('-');
-                    if(rnd[id].won) { res[w] += rnd[id].amount; res[l] -= rnd[id].amount; }
+                    if (rnd[id].won) { 
+                        res[w] += rnd[id].amount; 
+                        res[l] -= rnd[id].amount; 
+                    }
                 });
             });
+            
             const totalsDiv = document.getElementById('juice-totals');
-            if (totalsDiv) totalsDiv.innerHTML = PLAYERS.map(p => `<div class="bg-stone-900 p-4 rounded-2xl text-center shadow-lg"><span class="block text-[10px] text-stone-400 font-bold mb-1 uppercase tracking-widest">${p}</span><span class="text-xl font-black ${res[p]>=0?'text-emerald-400':'text-rose-400'}">${res[p]>=0?'+$':'-$'}${Math.abs(res[p])}</span></div>`).join('');
+            if (totalsDiv) {
+                totalsDiv.innerHTML = PLAYERS.map(p => 
+                    `<div class="bg-stone-900 p-4 rounded-2xl text-center shadow-lg">
+                        <span class="block text-[10px] text-stone-400 font-bold mb-1 uppercase tracking-widest">${p}</span>
+                        <span class="text-xl font-black ${res[p] >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${res[p] >= 0 ? '+$' : '-$'}${Math.abs(res[p])}</span>
+                    </div>`
+                ).join('');
+            }
         }
 
         function renderItineraryNav() {
-            document.getElementById('itinerary-tabs').innerHTML = state.itinerary.map((d,i)=>`<button onclick="setDay(${i})" class="px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition border ${state.currentDayIdx===i?'bg-white text-emerald-950 border-white shadow-md scale-105':'bg-transparent text-emerald-100 border-emerald-800 hover:bg-emerald-900'}">${d.date}</button>`).join('');
+            const tabsContainer = document.getElementById('itinerary-tabs');
+            if (!tabsContainer) return;
+
+            tabsContainer.innerHTML = state.itinerary.map((d, i) => {
+                const activeClasses = state.currentDayIdx === i 
+                    ? 'bg-white text-emerald-950 border-white shadow-md scale-105' 
+                    : 'bg-transparent text-emerald-100 border-emerald-800 hover:bg-emerald-900';
+                return `<button onclick="setDay(${i})" class="px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition border ${activeClasses}">${d.date}</button>`;
+            }).join('');
         }
 
-        window.setDay = (i) => { state.currentDayIdx=i; renderItineraryNav(); renderItineraryContent(); };
+        window.setDay = (i) => { 
+            state.currentDayIdx = i; 
+            renderItineraryNav(); 
+            renderItineraryContent(); 
+        };
 
         function renderItineraryContent() {
-            const d = state.itinerary[state.currentDayIdx]; if(!d) return;
-            let golf = d.golf.length>0 ? `<div class="bg-emerald-900 text-white rounded-2xl shadow-lg overflow-hidden mb-6"><div class="px-5 py-4 border-b border-emerald-800 flex items-center space-x-2"><h3 class="font-serif font-bold text-xl">The Golf</h3></div><div class="p-3">${d.golf.map(g=>`<button onclick="jumpToMatch('${g.matchId}')" class="w-full text-left flex justify-between items-center bg-emerald-800 rounded-xl p-4 mb-3 shadow-md border border-emerald-600"><div><h4 class="font-bold text-lg text-white">${g.course}</h4><div class="text-emerald-300 text-xs font-bold uppercase mt-1"><span class="text-amber-400">⛳️ TEE:</span> ${g.time}</div></div><div class="bg-emerald-950 rounded-full w-8 h-8 flex items-center justify-center">→</div></button>`).join('')}</div></div>` : '';
-            document.getElementById('itinerary-content').innerHTML = `<div class="bg-white rounded-3xl shadow-xl border border-stone-200 p-6 md:p-10 fade-in"><div class="flex justify-between items-center mb-6 border-b border-stone-100 pb-4"><div><h2 class="serif text-3xl md:text-4xl font-bold text-stone-900">${d.day}</h2><p class="text-emerald-700 font-bold uppercase tracking-widest text-xs mt-1">${d.date}</p></div><div class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">Day ${state.currentDayIdx+1}</div></div><div class="mb-8 border-l-4 border-amber-400 pl-5 py-2 bg-stone-50 rounded-r-xl pr-4"><p class="serif text-lg italic text-stone-700 leading-snug">"${d.quote}"</p></div><div class="grid grid-cols-2 gap-4 mb-6"><div class="bg-stone-50 p-4 rounded-2xl border border-stone-100 flex items-center space-x-3"><div class="text-amber-500">☀️</div><div><p class="text-[9px] text-stone-400 uppercase tracking-widest font-bold">Wake Up</p><p class="font-bold text-stone-800">${d.wakeUp}</p></div></div><div class="bg-stone-50 p-4 rounded-2xl border border-stone-100 flex items-center space-x-3"><div class="text-indigo-500">🌙</div><div><p class="text-[9px] text-stone-400 uppercase tracking-widest font-bold">Sleep In</p><p class="font-bold text-stone-800">${d.sleep}</p></div></div></div>${golf}<div class="bg-gradient-to-br from-amber-50 to-orange-50/50 rounded-2xl border border-amber-200/60 p-6 shadow-sm"><div class="flex items-center space-x-2 mb-2 text-amber-800"><h3 class="font-serif font-bold text-xl">City Guide: ${d.intel.city}</h3></div><p class="text-stone-600 text-sm leading-relaxed font-medium mb-4">${d.intel.description}</p><div class="border-t border-amber-200/60 pt-4"><p class="text-stone-800 font-medium text-sm"><span class="text-emerald-600 mr-2 font-bold uppercase text-[10px]">Hotel:</span>${d.intel.hotel}</p></div></div></div>`;
+            const d = state.itinerary[state.currentDayIdx]; 
+            if (!d) return;
+            
+            let golf = '';
+            if (d.golf.length > 0) {
+                const golfItems = d.golf.map(g => 
+                    `<button onclick="jumpToMatch('${g.matchId}')" class="w-full text-left flex justify-between items-center bg-emerald-800 rounded-xl p-4 mb-3 shadow-md border border-emerald-600">
+                        <div>
+                            <h4 class="font-bold text-lg text-white">${g.course}</h4>
+                            <div class="text-emerald-300 text-xs font-bold uppercase mt-1">
+                                <span class="text-amber-400">⛳️ TEE:</span> ${g.time}
+                            </div>
+                        </div>
+                        <div class="bg-emerald-950 rounded-full w-8 h-8 flex items-center justify-center">→</div>
+                    </button>`
+                ).join('');
+                
+                golf = `
+                    <div class="bg-emerald-900 text-white rounded-2xl shadow-lg overflow-hidden mb-6">
+                        <div class="px-5 py-4 border-b border-emerald-800 flex items-center space-x-2">
+                            <h3 class="font-serif font-bold text-xl">The Golf</h3>
+                        </div>
+                        <div class="p-3">${golfItems}</div>
+                    </div>`;
+            }
+
+            document.getElementById('itinerary-content').innerHTML = `
+                <div class="bg-white rounded-3xl shadow-xl border border-stone-200 p-6 md:p-10 fade-in">
+                    <div class="flex justify-between items-center mb-6 border-b border-stone-100 pb-4">
+                        <div>
+                            <h2 class="serif text-3xl md:text-4xl font-bold text-stone-900">${d.day}</h2>
+                            <p class="text-emerald-700 font-bold uppercase tracking-widest text-xs mt-1">${d.date}</p>
+                        </div>
+                        <div class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
+                            Day ${state.currentDayIdx + 1}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-8 border-l-4 border-amber-400 pl-5 py-2 bg-stone-50 rounded-r-xl pr-4">
+                        <p class="serif text-lg italic text-stone-700 leading-snug">"${d.quote}"</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-stone-50 p-4 rounded-2xl border border-stone-100 flex items-center space-x-3">
+                            <div class="text-amber-500">☀️</div>
+                            <div>
+                                <p class="text-[9px] text-stone-400 uppercase tracking-widest font-bold">Wake Up</p>
+                                <p class="font-bold text-stone-800">${d.wakeUp}</p>
+                            </div>
+                        </div>
+                        <div class="bg-stone-50 p-4 rounded-2xl border border-stone-100 flex items-center space-x-3">
+                            <div class="text-indigo-500">🌙</div>
+                            <div>
+                                <p class="text-[9px] text-stone-400 uppercase tracking-widest font-bold">Sleep In</p>
+                                <p class="font-bold text-stone-800">${d.sleep}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${golf}
+                    
+                    <div class="bg-gradient-to-br from-amber-50 to-orange-50/50 rounded-2xl border border-amber-200/60 p-6 shadow-sm">
+                        <div class="flex items-center space-x-2 mb-2 text-amber-800">
+                            <h3 class="font-serif font-bold text-xl">City Guide: ${d.intel.city}</h3>
+                        </div>
+                        <p class="text-stone-600 text-sm leading-relaxed font-medium mb-4">${d.intel.description}</p>
+                        <div class="border-t border-amber-200/60 pt-4">
+                            <p class="text-stone-800 font-medium text-sm">
+                                <span class="text-emerald-600 mr-2 font-bold uppercase text-[10px]">Hotel:</span>
+                                ${d.intel.hotel}
+                            </p>
+                        </div>
+                    </div>
+                </div>`;
         }
 
-        window.jumpToMatch = (id) => { state.currentCourseId=id; navigateTo('matches'); };
-
-        // Logic to refresh the UI when data comes in
-        function render() {
-            if (state.activeTab === 'belt') viewBeltPoints();
-            else if (state.activeTab === 'ledger') viewLedger();
-            else if (state.activeTab === 'matches') switchCourse(state.currentCourseId);
-        }
+        window.jumpToMatch = (id) => { 
+            state.currentCourseId = id; 
+            navigateTo('matches'); 
+        };
 
         // STARTUP
         fetchInitialData();
