@@ -122,7 +122,6 @@
 
     <script>
         // --- 1. CONFIG & GLOBALS ---
-        // Your specific Apps Script URL
         const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwbnxhpeLc7aYjRTwZJuKx_igHRzH2rMkiBi16Z5MKjWixaHqLJYsWUac9nd4H7mXo_/exec"; 
 
         const PLAYERS = ["GC", "PI", "SW", "CF"]; 
@@ -195,6 +194,23 @@
         };
 
         // --- 2. DATA PIPELINE ---
+
+        // Enhanced fetch helper to specifically target GAS issues
+        // We remove explicit 'mode' and 'cache' headers here as they can trigger a CORS OPTIONS preflight request 
+        // which Google Apps Script does not support. We rely on the URL cache-buster string instead.
+        async function fetchLiveStorage(url) {
+            try {
+                const response = await fetch(url + "?nocache=" + Date.now());
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                return await response.json();
+            } catch (error) {
+                console.error("Fetch failed:", error);
+                throw error;
+            }
+        }
+
         async function fetchInitialData() {
             const subtext = document.getElementById('loading-subtext');
             try {
@@ -225,43 +241,43 @@
 
                 if (state.matches.length > 0) state.currentCourseId = state.matches[0].id;
 
-                if (subtext) subtext.innerText = "Contacting Live Database...";
-                await loadLiveStorage();
+                if (subtext) subtext.innerText = "Loading Live Scores...";
+                
+                try {
+                    const data = await fetchLiveStorage(GAS_WEB_APP_URL);
+                    if (Array.isArray(data)) {
+                        data.forEach(row => {
+                            if (row.category === 'matchData') {
+                                if (!state.matchData[row.courseId]) state.matchData[row.courseId] = {};
+                                state.matchData[row.courseId][row.key] = row.value;
+                            } else if (row.category === 'sideBets') {
+                                if (!state.sideBets[row.courseId]) state.sideBets[row.courseId] = {};
+                                try { state.sideBets[row.courseId][row.key] = JSON.parse(row.value); } catch(e) {}
+                            } else if (row.category === 'beltPoints') {
+                                if (!state.beltPoints[row.courseId]) state.beltPoints[row.courseId] = {};
+                                state.beltPoints[row.courseId][row.key] = row.value;
+                            }
+                        });
+                    }
+                } catch (liveError) {
+                    console.warn("Live database failed to load. Continuing with static data.", liveError);
+                    const indicator = document.getElementById('cloud-sync-indicator');
+                    if (indicator) {
+                        indicator.innerText = "● Offline Mode - Check Apps Script URL";
+                        indicator.classList.add('text-amber-500');
+                    }
+                }
 
                 document.getElementById('view-loading').classList.add('hidden');
                 document.getElementById('view-hub').classList.remove('hidden');
 
             } catch (e) { 
-                console.error("Load Error:", e); 
-                if (subtext) subtext.innerHTML = `<span class="text-red-500">Connection Failed. Check CSV Publish settings.</span>`;
-            }
-        }
-
-        async function loadLiveStorage() {
-            try {
-                // We use a timestamp to avoid aggressive browser caching of the GET request
-                const response = await fetch(GAS_WEB_APP_URL + "?t=" + Date.now());
-                const data = await response.json();
-                
-                data.forEach(row => {
-                    if (row.category === 'matchData') {
-                        if (!state.matchData[row.courseId]) state.matchData[row.courseId] = {};
-                        state.matchData[row.courseId][row.key] = row.value;
-                    } else if (row.category === 'sideBets') {
-                        if (!state.sideBets[row.courseId]) state.sideBets[row.courseId] = {};
-                        try { state.sideBets[row.courseId][row.key] = JSON.parse(row.value); } catch(e) {}
-                    } else if (row.category === 'beltPoints') {
-                        if (!state.beltPoints[row.courseId]) state.beltPoints[row.courseId] = {};
-                        state.beltPoints[row.courseId][row.key] = row.value;
-                    }
-                });
-            } catch (e) { 
-                console.error("Sheet Load Error:", e); 
+                console.error("Critical Load Error:", e); 
+                if (subtext) subtext.innerHTML = `<span class="text-red-500">Critical Error. Check CSV Public Access.</span>`;
             }
         }
 
         async function postToSheet(params) {
-            // Visual feedback for syncing
             const indicator = document.getElementById('cloud-sync-indicator');
             if (indicator) {
                 indicator.innerText = "● Syncing to Cloud...";
@@ -270,18 +286,13 @@
             }
 
             try {
-                // Using no-cors as Google Apps Script doesn't support the POST preflight OPTIONS request
-                // This will return an "opaque" response, but the data will hit the server.
+                // 'no-cors' prevents preflight checks. We are sending standard stringified JSON.
                 await fetch(GAS_WEB_APP_URL, {
                     method: 'POST',
                     mode: 'no-cors',
-                    cache: 'no-cache',
-                    redirect: 'follow',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(params)
                 });
                 
-                // Assuming success for opaque response after a short delay
                 setTimeout(() => {
                     if (indicator) {
                         indicator.innerText = "● Live Sheet Database Active";
@@ -486,9 +497,15 @@
 
         window.jumpToMatch = (id) => { state.currentCourseId=id; navigateTo('matches'); };
 
-        // INITIAL BOOTSTRAP
-        fetchInitialData();
+        // Logic to refresh the UI when data comes in
+        function render() {
+            if (state.activeTab === 'belt') viewBeltPoints();
+            else if (state.activeTab === 'ledger') viewLedger();
+            else if (state.activeTab === 'matches') switchCourse(state.currentCourseId);
+        }
 
+        // STARTUP
+        fetchInitialData();
     </script>
 </body>
 </html>
