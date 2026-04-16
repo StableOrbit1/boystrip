@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>This is 50. Scotland & Ireland 2026</title>
+    <title>BoysTrip | The Ultimate Tour Companion</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap" rel="stylesheet">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -22,9 +21,6 @@
             }
         }
     </script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
     <style>
         body { background-color: #f5f5f4; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .serif { font-family: 'Playfair Display', serif; }
@@ -39,16 +35,28 @@
 </head>
 <body class="text-slate-900 antialiased">
 
-    <div id="view-loading" class="fixed inset-0 z-[200] bg-stone-950 flex flex-col items-center justify-center p-6 text-center">
-        <h2 class="serif text-3xl text-emerald-500 animate-pulse italic">Connecting to Tour Database...</h2>
-        <p id="loading-subtext" class="text-stone-500 text-[10px] uppercase tracking-widest mt-4 font-bold">Synchronizing Real-Time Cloud</p>
+    <!-- Front Door: Trip Login -->
+    <div id="view-login" class="fixed inset-0 z-[200] bg-stone-950 flex flex-col items-center justify-center p-6 text-center">
+        <div class="max-w-sm w-full fade-in">
+            <h1 class="serif text-5xl text-white italic mb-2">BoysTrip</h1>
+            <p class="text-emerald-500 tracking-[0.3em] uppercase text-[10px] font-bold mb-12">Enter Tour Code</p>
+            
+            <div class="bg-white/10 p-8 rounded-3xl border border-white/20 backdrop-blur-md shadow-2xl">
+                <input type="text" id="trip-code-input" placeholder="e.g. SCOT26" class="w-full bg-stone-900 border-2 border-stone-700 rounded-xl px-4 py-4 text-center text-2xl font-black text-white uppercase tracking-widest mb-4 focus:outline-none focus:border-emerald-500 transition-colors">
+                <button id="btn-join-trip" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black uppercase tracking-widest transition-all shadow-xl active:scale-95">
+                    Join Tour
+                </button>
+                <p id="login-error" class="text-rose-400 text-xs font-bold mt-4 hidden"></p>
+            </div>
+            <p id="loading-subtext" class="text-stone-500 text-[10px] uppercase tracking-widest mt-8 font-bold hidden animate-pulse">Synchronizing Real-Time Cloud...</p>
+        </div>
     </div>
 
     <!-- Hub View -->
     <div id="view-hub" class="hidden fixed inset-0 z-[100] bg-stone-950 flex flex-col items-center justify-center p-6 text-center">
         <div class="mb-12 fade-in">
-            <h1 class="serif text-6xl md:text-8xl text-white italic mb-4 leading-tight">This is 50.</h1>
-            <p class="text-stone-500 tracking-[0.4em] uppercase text-[10px] font-bold">Scotland & Ireland Elite Tour 2026</p>
+            <h1 id="hub-trip-name" class="serif text-5xl md:text-7xl text-white italic mb-4 leading-tight px-4"></h1>
+            <p class="text-stone-500 tracking-[0.4em] uppercase text-[10px] font-bold">Official Tour App</p>
         </div>
         <div class="space-y-4 w-full max-w-sm fade-in" style="animation-delay: 0.1s">
             <button onclick="navigateTo('matches')" class="w-full py-6 bg-emerald-800 hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest transition-all shadow-2xl border border-emerald-600 active:scale-95">View the Golf Matches</button>
@@ -120,10 +128,7 @@
             </section>
         </main>
         <footer class="text-center py-6">
-            <p class="text-slate-400 text-[8px] tracking-widest uppercase mb-2">&copy; 2026 FAKC • Flatson Ass Kicking Corp</p>
-            <p class="text-slate-500 text-[10px] tracking-widest uppercase">
-                This Trip is Powered by <button onclick="navigateTo('boystrip')" class="text-emerald-600 font-bold hover:underline transition-all">BoysTrip</button>
-            </p>
+            <p class="text-slate-400 text-[8px] tracking-widest uppercase mb-2">&copy; 2026 BoysTrip</p>
         </footer>
     </div>
 
@@ -134,7 +139,7 @@
                 <button onclick="navigateTo('hub')" class="text-emerald-300 text-[10px] font-bold uppercase tracking-widest border border-emerald-800 px-3 py-2 rounded-lg hover:bg-emerald-900 transition">← Hub</button>
                 <div class="text-center">
                     <h1 class="text-xl md:text-2xl font-serif font-bold tracking-wide">Tour Itinerary</h1>
-                    <p class="text-emerald-400 text-[9px] uppercase tracking-widest mt-1">June 6 – 17, 2026</p>
+                    <p id="itn-trip-dates" class="text-emerald-400 text-[9px] uppercase tracking-widest mt-1"></p>
                 </div>
                 <div class="w-10"></div>
             </div>
@@ -143,16 +148,12 @@
             </div>
         </header>
         <main id="itinerary-content" class="flex-grow max-w-4xl w-full mx-auto p-4 md:p-8"></main>
-        <footer class="text-center py-6 bg-transparent">
-            <p class="text-slate-500 text-[10px] tracking-widest uppercase">
-                This Trip is Powered by <button onclick="navigateTo('boystrip')" class="text-emerald-600 font-bold hover:underline transition-all">BoysTrip</button>
-            </p>
-        </footer>
     </div>
 
     <!-- BoysTrip About View -->
     <div id="view-boystrip" class="hidden min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
         <div class="max-w-xl mx-auto fade-in">
+            <!-- Ensure you upload a logo.png or this will hide safely -->
             <img src="logo.png" alt="BoysTrip Logo" class="w-[36rem] max-w-full mx-auto mb-8" onerror="this.style.display='none';">
             
             <p class="text-stone-700 text-lg mb-6 leading-relaxed font-medium">
@@ -172,7 +173,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- 1. FIREBASE CONFIG ---
         const firebaseConfig = {
@@ -189,8 +190,8 @@
         const db = getFirestore(app);
 
         // --- 2. GLOBAL DATA & STATE ---
-        const PLAYERS = ["GC", "PI", "SW", "CF"]; 
-        const FULL_NAMES = { "GC": "Greg", "PI": "Parker", "SW": "Scott", "CF": "Craig" };
+        let activeTripId = null;
+        let PLAYERS = []; // Populated dynamically
         const SVG_PINT = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M7 21h10a2 2 0 0 0 2-2l1-13H4l1 13a2 2 0 0 0 2 2Z"></path><path d="M12 6v15"></path><path d="M15 6v15"></path><path d="M9 6v15"></path><path d="M19 6V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v1"></path></svg>`;
 
         const TOASTS = [
@@ -201,124 +202,111 @@
             "Sláinte mhath! (Good health!)",
             "There are no strangers here, only friends you haven't yet met.",
             "May you always have a clean shirt, a clear conscience, and a guinea in your pocket.",
-            "May the road rise up to meet you and the wind be always at your back.",
-            "May the roof above us never fall in, and may we friends gathered below never fall out.",
-            "Freedom and whisky gang thegither!",
-            "May you have the hindsight to know where you've been, the foresight to know where you're going, and the insight to know when you're going too far.",
-            "To a long life and a merry one. A quick death and an easy one. A pretty girl and an honest one. A cold beer and another one!",
-            "Here’s to being single, or here’s to being married, or here’s to being like me: somewhere in between!",
-            "May we never want a friend in need, nor a friend to help us.",
-            "To the world, you may be one person, but to one person you may be the world.",
-            "May your neighbors respect you, trouble neglect you, the angels protect you, and heaven accept you.",
-            "Here’s to the floor that never gives way, and the roof that never falls in.",
-            "May we always be as merry as we are today.",
-            "To absent friends. God bless them.",
-            "May you live as long as you want, and never want as long as you live.",
-            "Here’s to champagne for our real friends, and real pain for our sham friends.",
-            "May we always have a friend to buy us a drink, and a drink to buy a friend.",
-            "A glass in the hand is worth two on the shelf.",
-            "To good health, good wealth, and the time to enjoy them both.",
-            "May you work like you don't need the money, love like you've never been hurt, and dance like no one is watching.",
-            "Here’s to those who wish us well, and those who don't can go to... well, you know.",
-            "May the bridge you cross be the one you don't burn.",
-            "To the nights we can't remember, with the friends we'll never forget.",
-            "May your glass be ever full, and your heart be ever light.",
-            "Drink today, and drown all sorrow; you shall perhaps not do it tomorrow.",
-            "Here’s to a long life and a happy one. A quick death and an easy one.",
-            "To the friends we’ve made, the friends we’ve lost, and the friends we’re about to make.",
-            "May we always have the courage of our convictions and the conviction of our courage.",
-            "Here's to the liars, the cheaters, the thieves, and the drinkers.",
-            "May you lie only to save a friend.",
-            "May you cheat only death.",
-            "May you steal only a heart.",
-            "I have taken more out of alcohol than alcohol has taken out of me. — Winston Churchill",
-            "Work is the curse of the drinking classes. — Oscar Wilde",
-            "In victory, you deserve Champagne. In defeat, you need it. — Napoleon Bonaparte",
-            "Beer is proof that God loves us and wants us to be happy. — Benjamin Franklin",
-            "Here's to doing and drinking, not sitting and thinking.",
-            "To the best of times, which are always yet to come.",
-            "May your heart be light and your glass be heavy."
+            "May the road rise up to meet you and the wind be always at your back."
         ];
 
         let state = {
-            matches: [], itinerary: [], matchData: {}, sideBets: {}, 
+            trip: {}, matches: [], itinerary: [], matchData: {}, sideBets: {}, 
             beltPoints: {}, finalScores: {}, handicaps: {}, timeMachine: {},
             currentCourseId: null, currentDayIdx: 0, activeTab: 'matches',
-            currentView: 'hub', previousView: 'hub'
-        };
-
-        const sheetUrls = {
-            itinerary: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSWo3Yh7t25FQHKWbwOwlBMqlS0KvH89mCw494kbiHakFe7jbmTxHwu4V6oRwI0_E6upPCv9MgwN23i/pub?gid=0&single=true&output=csv',
-            matches: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSWo3Yh7t25FQHKWbwOwlBMqlS0KvH89mCw494kbiHakFe7jbmTxHwu4V6oRwI0_E6upPCv9MgwN23i/pub?gid=2141277357&single=true&output=csv',
-            holes: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSWo3Yh7t25FQHKWbwOwlBMqlS0KvH89mCw494kbiHakFe7jbmTxHwu4V6oRwI0_E6upPCv9MgwN23i/pub?gid=1612329092&single=true&output=csv'
+            currentView: 'login', previousView: 'login'
         };
 
         // --- 3. BOOTSTRAP ---
-        async function initApp() {
-            const subtext = document.getElementById('loading-subtext');
+        async function boot() {
             try {
-                if (subtext) subtext.innerText = "Authenticating with Firebase...";
                 await signInAnonymously(auth);
+            } catch (err) {
+                document.getElementById('login-error').innerText = "Database connection failed. Please check network.";
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        }
 
-                if (subtext) subtext.innerText = "Fetching Itinerary & Course Data...";
-                const fetchCSV = (url) => new Promise((res, rej) => Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => res(r.data), error: rej }));
-                const [itn, mtch, hls] = await Promise.all([fetchCSV(sheetUrls.itinerary), fetchCSV(sheetUrls.matches), fetchCSV(sheetUrls.holes)]);
+        document.getElementById('btn-join-trip').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-join-trip');
+            const errorEl = document.getElementById('login-error');
+            const loader = document.getElementById('loading-subtext');
+            const code = document.getElementById('trip-code-input').value.trim().toUpperCase();
 
-                state.matches = mtch.map(m => {
-                    const mId = String(m.matchId || m.id || '').trim();
-                    return {
-                        id: mId, course: m.course, date: m.date, matchUp: m.matchUp, teeTime: m.teeTime || 'TBD',
-                        teamA: m.teamA || 'Team A', teamB: m.teamB || 'Team B', video: formatYouTubeUrl(m.video),
-                        holes: hls.filter(h => String(h.matchId || h.id).trim() === mId).map(h => ({
-                            number: parseInt(h.number), name: h.name, par: parseInt(h.par), yardage: parseInt(h.yardage), tip: h.tip
-                        }))
-                    };
+            if (!code) {
+                errorEl.innerText = "Please enter a valid Tour Code.";
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Locating Tour...";
+            errorEl.classList.add('hidden');
+            loader.classList.remove('hidden');
+
+            try {
+                // Fetch Master Trip Document
+                const tripDoc = await getDoc(doc(db, 'trips', code));
+                if (!tripDoc.exists()) {
+                    throw new Error("Tour Code not found.");
+                }
+
+                activeTripId = code;
+                state.trip = tripDoc.data();
+                PLAYERS = state.trip.players || [];
+                
+                document.getElementById('hub-trip-name').innerText = state.trip.tripName || "Elite Tour";
+                document.getElementById('itn-trip-dates').innerText = `${state.trip.startDate || ''} – ${state.trip.endDate || ''}`;
+
+                // Fetch Itinerary Sub-collection
+                const itnSnap = await getDocs(collection(db, 'trips', code, 'itinerary'));
+                state.itinerary = [];
+                itnSnap.forEach(d => state.itinerary.push(d.data()));
+                // Sort by date strings to keep chronological order
+                state.itinerary.sort((a,b) => (a.date || "").localeCompare(b.date || ""));
+
+                // Fetch Matches Sub-collection
+                const mtchSnap = await getDocs(collection(db, 'trips', code, 'matches'));
+                state.matches = [];
+                mtchSnap.forEach(d => {
+                    let mData = d.data();
+                    mData.id = d.id; // Assign Firestore ID to the match for tracking
+                    state.matches.push(mData);
                 });
-
-                state.itinerary = itn.map(day => ({
-                    day: day.day, date: day.date, quote: day.quote, wakeUp: day.wakeUp, sleep: day.sleep,
-                    golf: state.matches.filter(m => {
-                        const mD = String(m.date).toLowerCase().trim();
-                        const iD = String(day.date).toLowerCase().trim();
-                        return mD.includes(iD) || iD.includes(mD);
-                    }).map(m => ({ course: m.course, time: m.teeTime, matchId: m.id })),
-                    intel: { city: day.intel_city, description: day.intel_desc, hotel: day.intel_hotel, hotspots: day.intel_hotspots ? day.intel_hotspots.split('|') : [] }
-                }));
+                // Sort by date strings
+                state.matches.sort((a,b) => (a.date || "").localeCompare(b.date || ""));
 
                 if (state.matches.length > 0) state.currentCourseId = state.matches[0].id;
 
-                if (subtext) subtext.innerText = "Synchronizing Live Data...";
+                // Wire up Real-Time LEDGER Listeners
                 setupLiveListeners();
 
-                document.getElementById('view-loading').classList.add('hidden');
+                // Transition UI
+                document.getElementById('view-login').classList.add('hidden');
                 document.getElementById('view-hub').classList.remove('hidden');
+                state.currentView = 'hub';
 
             } catch (error) {
-                console.error("Initialization Error:", error);
-                if (subtext) {
-                    subtext.innerHTML = `<span class="text-red-500 font-mono text-[10px] mt-2 block bg-black/50 p-2 rounded max-w-sm mx-auto text-left break-words">
-                        ERROR: ${error.message || error.code || 'Connection Failure'}<br>
-                        HINT: Check Firebase Authentication -> Anonymous and Authorized Domains settings.
-                    </span>`;
-                }
+                btn.disabled = false;
+                btn.innerText = "Join Tour";
+                loader.classList.add('hidden');
+                errorEl.innerText = error.message;
+                errorEl.classList.remove('hidden');
             }
-        }
+        });
+
 
         // --- 4. REAL-TIME DATA ---
         function setupLiveListeners() {
             ['matchData', 'sideBets', 'beltPoints', 'finalScores', 'handicaps', 'timeMachine'].forEach(colName => {
-                onSnapshot(collection(db, colName), (snap) => {
+                onSnapshot(collection(db, 'trips', activeTripId, 'ledger', colName), (snap) => {
                     snap.forEach(docSnap => { state[colName][docSnap.id] = docSnap.data(); });
-                    renderActiveView();
+                    if (state.currentView === 'matches') renderActiveView();
                 });
             });
         }
 
-        async function syncToCloud(col, docId, data) {
+        async function syncToCloud(colName, docId, data) {
             const ind = document.getElementById('cloud-sync-indicator');
             if (ind) { ind.innerText = "● Syncing..."; ind.className = "mt-8 text-[9px] text-amber-500 uppercase tracking-widest font-bold"; }
             try {
-                await setDoc(doc(db, col, docId), data, { merge: true });
+                // Notice the new nested path!
+                await setDoc(doc(db, 'trips', activeTripId, 'ledger', colName, docId), data, { merge: true });
                 setTimeout(() => { if (ind) { ind.innerText = "● Live Cloud Database Active"; ind.className = "mt-8 text-[9px] text-emerald-500/50 uppercase tracking-widest font-bold"; } }, 1000);
             } catch (e) {
                 if (ind) { ind.innerText = "● Sync Error: " + e.code; ind.className = "mt-8 text-[9px] text-rose-500 uppercase tracking-widest font-bold"; }
@@ -363,22 +351,13 @@
         };
 
         // --- 5. UI CORE ---
-        function formatYouTubeUrl(url) {
-            if (!url) return '';
-            let v = '';
-            if (url.includes('embed/')) v = url.split('embed/')[1].split('?')[0];
-            else if (url.includes('youtu.be/')) v = url.split('youtu.be/')[1].split('?')[0];
-            else if (url.includes('watch?v=')) v = url.split('watch?v=')[1].split('&')[0];
-            return v ? `https://www.youtube.com/embed/${v}?autoplay=1&mute=1` : url;
-        }
-
         window.navigateTo = (vid) => {
             if (state.currentView !== vid) {
                 state.previousView = state.currentView;
                 state.currentView = vid;
             }
             
-            ['hub', 'matches', 'itinerary', 'boystrip'].forEach(id => document.getElementById('view-' + id).classList.add('hidden'));
+            ['hub', 'matches', 'itinerary', 'boystrip'].forEach(id => document.getElementById('view-' + id)?.classList.add('hidden'));
             const target = document.getElementById('view-' + vid);
             if (target) target.classList.remove('hidden');
 
@@ -408,7 +387,7 @@
             document.getElementById('time-machine-section').classList.add('hidden');
         }
 
-        // --- NEW FEATURE: HONOURS ---
+        // --- HONOURS ---
         window.viewHonours = () => {
             clearTabs(); state.activeTab = 'honours'; document.getElementById('tab-honours').classList.add('tab-active');
             document.getElementById('course-content').innerHTML = `
@@ -442,18 +421,16 @@
                     <div></div>
                     <div class="flex flex-col items-center justify-end text-indigo-400"><span class="text-xl">↑</span><span class="text-3xl font-black text-white">${numbers[0]}</span></div>
                     <div></div>
-                    
                     <div class="flex items-center justify-end text-indigo-400"><span class="text-3xl font-black text-white mr-2">${numbers[1]}</span><span class="text-xl">←</span></div>
                     <div class="flex items-center justify-center"><div class="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-white text-3xl shadow-inner border-2 border-indigo-400 shadow-[0_0_15px_rgba(79,70,229,0.5)]">🏌️</div></div>
                     <div class="flex items-center justify-start text-indigo-400"><span class="text-xl">→</span><span class="text-3xl font-black text-white ml-2">${numbers[2]}</span></div>
-                    
                     <div></div>
                     <div class="flex flex-col items-center justify-start text-indigo-400"><span class="text-3xl font-black text-white mb-1">${numbers[3]}</span><span class="text-xl">↓</span></div>
                     <div></div>
                 </div>`;
         };
 
-        // --- EXISTING FEATURES ---
+        // --- BELT POINTS ---
         window.viewBeltPoints = () => {
             clearTabs(); state.activeTab = 'belt'; document.getElementById('tab-belt').classList.add('tab-active');
             let sums = {}; PLAYERS.forEach(p => sums[p] = 0);
@@ -497,7 +474,7 @@
             document.getElementById('next-round-result').innerHTML = `
                 <div class="fade-in text-center">
                     <p class="text-emerald-500 text-[10px] font-bold uppercase mb-3">Our Next Gracious Host is</p>
-                    <h3 class="serif text-6xl text-white font-bold italic mb-5">${FULL_NAMES[unlucky]}</h3>
+                    <h3 class="serif text-6xl text-white font-bold italic mb-5">${unlucky}</h3>
                     <div class="max-w-xs mx-auto pt-5 border-t border-white/10">
                         <p class="text-stone-400 text-sm leading-relaxed italic">"${toast}"</p>
                     </div>
@@ -541,10 +518,13 @@
                     </div>`;
             }).join('');
 
+            // Render iframe only if video exists to prevent errors
+            const videoHtml = course.video ? `<iframe class="absolute inset-0 w-full h-full" src="${course.video}" frameborder="0" allowfullscreen></iframe>` : `<div class="absolute inset-0 w-full h-full flex items-center justify-center text-stone-700 text-xs font-bold uppercase tracking-widest">No Course Flyover Available</div>`;
+
             document.getElementById('course-content').innerHTML = `
                 <div class="bg-white rounded-3xl shadow-xl overflow-hidden mb-4 border border-stone-200 fade-in">
                     <div class="relative w-full pt-[56.25%] bg-stone-900">
-                        <iframe class="absolute inset-0 w-full h-full" src="${course.video}" frameborder="0" allowfullscreen></iframe>
+                        ${videoHtml}
                     </div>
                     <div class="p-6 bg-stone-50 border-b flex justify-between items-end">
                         <div>
@@ -591,14 +571,12 @@
             container.innerHTML = html;
         }
 
-        // --- NEW FEATURE: TIME MACHINE ---
         function renderTimeMachine() {
             const container = document.getElementById('time-machine-container');
             const crsId = state.currentCourseId;
             const tmData = state.timeMachine[crsId] || {};
 
             if (!tmData.hole) {
-                // State 1: Pick the bet and hole
                 container.innerHTML = `
                     <div class="mb-4">
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-indigo-400 mb-2">Time Machine Bet Amount ($)</label>
@@ -609,7 +587,6 @@
                     </div>
                 `;
             } else {
-                // State 2: Enter Scores
                 let html = `
                     <div class="text-center mb-6">
                         <p class="text-indigo-400 text-[10px] font-bold uppercase tracking-widest">Selected Hole</p>
@@ -625,7 +602,7 @@
                     const score = (tmData.scores && tmData.scores[p]) || '';
                     html += `
                         <tr class="border-b border-indigo-50">
-                            <td class="py-3 font-bold text-stone-600">${FULL_NAMES[p]}</td>
+                            <td class="py-3 font-bold text-stone-600">${p}</td>
                             <td class="py-2 text-center">
                                 <input type="number" value="${score}" onchange="saveTimeMachineScore('${crsId}', '${p}', this.value)" class="w-20 text-center bg-indigo-50 rounded-lg py-2 font-black text-indigo-900 outline-none focus:ring-2 focus:ring-indigo-500 border border-indigo-100">
                             </td>
@@ -648,7 +625,6 @@
                 return;
             }
             
-            // Save amount
             if (!state.timeMachine[crsId]) state.timeMachine[crsId] = {};
             state.timeMachine[crsId].amount = amt;
             
@@ -661,10 +637,9 @@
                 if(!state.timeMachine[crsId].scores) state.timeMachine[crsId].scores = {};
                 syncToCloud('timeMachine', crsId, state.timeMachine[crsId]);
                 renderTimeMachine();
-                renderJuiceTable(); // recalculate juice just in case
+                renderJuiceTable(); 
             }, 3000);
         };
-
 
         window.viewLedger = () => {
             state.activeTab = 'ledger';
@@ -746,7 +721,7 @@
                     if (rnd[id].won) { res[w] += rnd[id].amount; res[l] -= rnd[id].amount; }
                 });
 
-                // Time Machine Juice (Zero-Sum Pot Math)
+                // Time Machine Juice
                 const tm = state.timeMachine[c];
                 if (tm && tm.hole && tm.amount > 0 && tm.scores) {
                     let validScores = 0;
@@ -756,13 +731,12 @@
                         if (s > 0) { validScores++; if (s < minScore) minScore = s; }
                     });
 
-                    // Only execute payout if all 4 players have logged a score for the hole
-                    if (validScores === 4) {
+                    if (validScores === PLAYERS.length) {
                         let winners = [];
                         let losers = [];
                         PLAYERS.forEach(p => { if (tm.scores[p] === minScore) winners.push(p); else losers.push(p); });
 
-                        if (winners.length > 0 && winners.length < 4) {
+                        if (winners.length > 0 && winners.length < PLAYERS.length) {
                             const bet = tm.amount;
                             const totalLost = losers.length * bet;
                             const winAmount = totalLost / winners.length;
@@ -803,13 +777,20 @@
             if (!d) return;
             
             let golf = '';
-            if (d.golf.length > 0) {
-                const golfItems = d.golf.map(g => 
-                    `<button onclick="jumpToMatch('${g.matchId}')" class="w-full text-left flex justify-between items-center bg-emerald-800 rounded-xl p-4 mb-3 shadow-md border border-emerald-600">
+            // Connect daily itinerary string matches to golf matches
+            const dayGolfMatches = state.matches.filter(m => {
+                const mD = String(m.date).toLowerCase().trim();
+                const iD = String(d.date).toLowerCase().trim();
+                return mD.includes(iD) || iD.includes(mD);
+            });
+
+            if (dayGolfMatches.length > 0) {
+                const golfItems = dayGolfMatches.map(g => 
+                    `<button onclick="jumpToMatch('${g.id}')" class="w-full text-left flex justify-between items-center bg-emerald-800 rounded-xl p-4 mb-3 shadow-md border border-emerald-600">
                         <div>
                             <h4 class="font-bold text-lg text-white">${g.course}</h4>
                             <div class="text-emerald-300 text-xs font-bold uppercase mt-1">
-                                <span class="text-amber-400">⛳️ TEE:</span> ${g.time}
+                                <span class="text-amber-400">⛳️ TEE:</span> ${g.time || 'TBD'}
                             </div>
                         </div>
                         <div class="bg-emerald-950 rounded-full w-8 h-8 flex items-center justify-center">→</div>
@@ -852,13 +833,13 @@
                     ${golf}
                     <div class="bg-gradient-to-br from-amber-50 to-orange-50/50 rounded-2xl border border-amber-200/60 p-6 shadow-sm">
                         <div class="flex items-center space-x-2 mb-2 text-amber-800">
-                            <h3 class="font-serif font-bold text-xl">City Guide: ${d.intel.city}</h3>
+                            <h3 class="font-serif font-bold text-xl">City Guide: ${(d.intel && d.intel.city) ? d.intel.city : 'N/A'}</h3>
                         </div>
-                        <p class="text-stone-600 text-sm leading-relaxed font-medium mb-4">${d.intel.description}</p>
+                        <p class="text-stone-600 text-sm leading-relaxed font-medium mb-4">${(d.intel && d.intel.description) ? d.intel.description : ''}</p>
                         <div class="border-t border-amber-200/60 pt-4">
                             <p class="text-stone-800 font-medium text-sm">
                                 <span class="text-emerald-600 mr-2 font-bold uppercase text-[10px]">Hotel:</span>
-                                ${d.intel.hotel}
+                                ${(d.intel && d.intel.hotel) ? d.intel.hotel : 'TBD'}
                             </p>
                         </div>
                     </div>
@@ -876,7 +857,7 @@
         }
 
         // STARTUP
-        initApp();
+        boot();
     </script>
 </body>
 </html>
