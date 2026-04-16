@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>This is 50. A Scotland & Ireland 2026</title>
+    <title>This is 50. Scotland & Ireland 2026</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -45,6 +45,7 @@
     <!-- Loading Screen -->
     <div id="view-loading" class="fixed inset-0 z-[200] bg-stone-950 flex flex-col items-center justify-center p-6 text-center">
         <h2 class="serif text-3xl text-emerald-500 animate-pulse italic">Connecting to Tour Database...</h2>
+        <p id="loading-subtext" class="text-stone-500 text-[10px] uppercase tracking-widest mt-4 font-bold">Synchronizing Cloud Storage</p>
     </div>
 
     <!-- Hub View -->
@@ -57,7 +58,7 @@
             <button onclick="navigateTo('matches')" class="w-full py-6 bg-emerald-800 hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest transition-all shadow-2xl border border-emerald-600 active:scale-95">View the Golf Matches</button>
             <button onclick="navigateTo('itinerary')" class="w-full py-6 bg-stone-800 hover:bg-stone-700 text-white rounded-2xl font-bold uppercase tracking-widest transition-all shadow-2xl border border-stone-600 active:scale-95">View the Itinerary</button>
         </div>
-        <div id="cloud-sync-indicator" class="mt-8 text-[9px] text-emerald-500/50 uppercase tracking-widest font-bold">● Live Sheet Database Active</div>
+        <div id="cloud-sync-indicator" class="mt-8 text-[9px] text-emerald-500/50 uppercase tracking-widest font-bold transition-colors">● Live Sheet Database Active</div>
     </div>
 
     <!-- Matches View -->
@@ -121,6 +122,7 @@
 
     <script>
         // --- 1. CONFIG & GLOBALS ---
+        // Your specific Apps Script URL
         const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwbnxhpeLc7aYjRTwZJuKx_igHRzH2rMkiBi16Z5MKjWixaHqLJYsWUac9nd4H7mXo_/exec"; 
 
         const PLAYERS = ["GC", "PI", "SW", "CF"]; 
@@ -194,7 +196,9 @@
 
         // --- 2. DATA PIPELINE ---
         async function fetchInitialData() {
+            const subtext = document.getElementById('loading-subtext');
             try {
+                if (subtext) subtext.innerText = "Fetching Itinerary & Course Data...";
                 const fetchCSV = (url) => new Promise((res, rej) => Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => res(r.data), error: rej }));
                 const [itn, mtch, hls] = await Promise.all([fetchCSV(sheetUrls.itinerary), fetchCSV(sheetUrls.matches), fetchCSV(sheetUrls.holes)]);
 
@@ -221,17 +225,22 @@
 
                 if (state.matches.length > 0) state.currentCourseId = state.matches[0].id;
 
+                if (subtext) subtext.innerText = "Contacting Live Database...";
                 await loadLiveStorage();
 
                 document.getElementById('view-loading').classList.add('hidden');
                 document.getElementById('view-hub').classList.remove('hidden');
 
-            } catch (e) { console.error("Load Error:", e); }
+            } catch (e) { 
+                console.error("Load Error:", e); 
+                if (subtext) subtext.innerHTML = `<span class="text-red-500">Connection Failed. Check CSV Publish settings.</span>`;
+            }
         }
 
         async function loadLiveStorage() {
             try {
-                const response = await fetch(GAS_WEB_APP_URL);
+                // We use a timestamp to avoid aggressive browser caching of the GET request
+                const response = await fetch(GAS_WEB_APP_URL + "?t=" + Date.now());
                 const data = await response.json();
                 
                 data.forEach(row => {
@@ -240,32 +249,60 @@
                         state.matchData[row.courseId][row.key] = row.value;
                     } else if (row.category === 'sideBets') {
                         if (!state.sideBets[row.courseId]) state.sideBets[row.courseId] = {};
-                        state.sideBets[row.courseId][row.key] = JSON.parse(row.value);
+                        try { state.sideBets[row.courseId][row.key] = JSON.parse(row.value); } catch(e) {}
                     } else if (row.category === 'beltPoints') {
                         if (!state.beltPoints[row.courseId]) state.beltPoints[row.courseId] = {};
                         state.beltPoints[row.courseId][row.key] = row.value;
                     }
                 });
-            } catch (e) { console.error("Sheet Load Error:", e); }
+            } catch (e) { 
+                console.error("Sheet Load Error:", e); 
+            }
         }
 
         async function postToSheet(params) {
+            // Visual feedback for syncing
+            const indicator = document.getElementById('cloud-sync-indicator');
+            if (indicator) {
+                indicator.innerText = "● Syncing to Cloud...";
+                indicator.classList.remove('text-emerald-500/50');
+                indicator.classList.add('text-amber-500');
+            }
+
             try {
-                fetch(GAS_WEB_APP_URL, {
+                // Using no-cors as Google Apps Script doesn't support the POST preflight OPTIONS request
+                // This will return an "opaque" response, but the data will hit the server.
+                await fetch(GAS_WEB_APP_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     cache: 'no-cache',
+                    redirect: 'follow',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(params)
                 });
-            } catch (e) { console.error("Save Error:", e); }
+                
+                // Assuming success for opaque response after a short delay
+                setTimeout(() => {
+                    if (indicator) {
+                        indicator.innerText = "● Live Sheet Database Active";
+                        indicator.classList.remove('text-amber-500');
+                        indicator.classList.add('text-emerald-500/50');
+                    }
+                }, 1500);
+            } catch (e) { 
+                console.error("Save Error:", e); 
+                if (indicator) {
+                    indicator.innerText = "● Sync Error - Check Connection";
+                    indicator.classList.add('text-rose-500');
+                }
+            }
         }
 
         // --- 3. CLOUD SAVE WRAPPERS ---
         function saveMatchPoint(crsId, hole, val) {
             if (!state.matchData[crsId]) state.matchData[crsId] = {};
             state.matchData[crsId][hole] = val;
-            postToSheet({ category: 'matchData', courseId: crsId, key: hole, value: val });
+            postToSheet({ category: 'matchData', courseId: crsId, key: String(hole), value: val });
             updateScore();
         }
 
@@ -282,7 +319,7 @@
         function saveBeltScore(crsId, player, val) {
             if (!state.beltPoints[crsId]) state.beltPoints[crsId] = {};
             state.beltPoints[crsId][player] = parseInt(val) || 0;
-            postToSheet({ category: 'beltPoints', courseId: crsId, key: player, value: val });
+            postToSheet({ category: 'beltPoints', courseId: crsId, key: player, value: String(val) });
             viewBeltPoints();
         }
 
@@ -297,10 +334,16 @@
         }
 
         function navigateTo(viewId) {
-            ['hub', 'matches', 'itinerary'].forEach(id => document.getElementById('view-' + id).classList.add('hidden'));
-            document.getElementById('view-' + viewId).classList.remove('hidden');
+            ['hub', 'matches', 'itinerary'].forEach(id => {
+                const el = document.getElementById('view-' + id);
+                if (el) el.classList.add('hidden');
+            });
+            const target = document.getElementById('view-' + viewId);
+            if (target) target.classList.remove('hidden');
+
             if (viewId === 'matches') renderMatchesNav(), switchCourse(state.currentCourseId);
             if (viewId === 'itinerary') renderItineraryNav(), renderItineraryContent();
+            window.scrollTo(0, 0);
         }
 
         function renderMatchesNav() {
@@ -384,13 +427,15 @@
             Object.values(d).forEach(v=>{if(v==='A')a++;if(v==='B')b++;});
             const c = state.matches.find(m=>m.id===state.currentCourseId);
             const sb = document.getElementById('display-score');
+            if (!c) return;
             if (a===b) sb.innerText="ALL SQUARE"; else sb.innerText=(a>b?c.teamA:c.teamB)+" +"+Math.abs(a-b);
         }
 
         function renderJuiceTable() {
             const h = document.getElementById('juice-table-header');
-            h.innerHTML = `<th class="p-3 w-16"></th>` + PLAYERS.map(p=>`<th class="p-3 text-center bg-stone-50">${p}</th>`).join('');
+            if (h) h.innerHTML = `<th class="p-3 w-16"></th>` + PLAYERS.map(p=>`<th class="p-3 text-center bg-stone-50">${p}</th>`).join('');
             const t = document.getElementById('juice-table');
+            if (!t) return;
             let html = '';
             PLAYERS.forEach(r => {
                 html += `<tr class="border-b border-stone-50"><td class="p-3 font-bold bg-stone-50 text-stone-500 border-r">${r}</td>`;
@@ -423,7 +468,8 @@
                     if(rnd[id].won) { res[w] += rnd[id].amount; res[l] -= rnd[id].amount; }
                 });
             });
-            document.getElementById('juice-totals').innerHTML = PLAYERS.map(p => `<div class="bg-stone-900 p-4 rounded-2xl text-center shadow-lg"><span class="block text-[10px] text-stone-400 font-bold mb-1 uppercase tracking-widest">${p}</span><span class="text-xl font-black ${res[p]>=0?'text-emerald-400':'text-rose-400'}">${res[p]>=0?'+$':'-$'}${Math.abs(res[p])}</span></div>`).join('');
+            const totalsDiv = document.getElementById('juice-totals');
+            if (totalsDiv) totalsDiv.innerHTML = PLAYERS.map(p => `<div class="bg-stone-900 p-4 rounded-2xl text-center shadow-lg"><span class="block text-[10px] text-stone-400 font-bold mb-1 uppercase tracking-widest">${p}</span><span class="text-xl font-black ${res[p]>=0?'text-emerald-400':'text-rose-400'}">${res[p]>=0?'+$':'-$'}${Math.abs(res[p])}</span></div>`).join('');
         }
 
         function renderItineraryNav() {
@@ -440,14 +486,9 @@
 
         window.jumpToMatch = (id) => { state.currentCourseId=id; navigateTo('matches'); };
 
-        // Logic to refresh the UI when data comes in
-        function render() {
-            if (state.activeTab === 'belt') viewBeltPoints();
-            else if (state.activeTab === 'ledger') viewLedger();
-            else if (state.activeTab === 'matches') switchCourse(state.currentCourseId);
-        }
-
+        // INITIAL BOOTSTRAP
         fetchInitialData();
+
     </script>
 </body>
 </html>
