@@ -45,7 +45,7 @@
     <!-- Loading Screen -->
     <div id="view-loading" class="fixed inset-0 z-[200] bg-stone-950 flex flex-col items-center justify-center p-6 text-center">
         <h2 class="serif text-3xl text-emerald-500 animate-pulse italic">Connecting to Tour Database...</h2>
-        <p id="loading-subtext" class="text-stone-500 text-[10px] uppercase tracking-widest mt-4 font-bold">Synchronizing Cloud Storage</p>
+        <p id="loading-subtext" class="text-stone-500 text-[10px] uppercase tracking-widest mt-4 font-bold">Synchronizing Real-Time Cloud</p>
     </div>
 
     <!-- Hub View -->
@@ -58,7 +58,7 @@
             <button onclick="navigateTo('matches')" class="w-full py-6 bg-emerald-800 hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest transition-all shadow-2xl border border-emerald-600 active:scale-95">View the Golf Matches</button>
             <button onclick="navigateTo('itinerary')" class="w-full py-6 bg-stone-800 hover:bg-stone-700 text-white rounded-2xl font-bold uppercase tracking-widest transition-all shadow-2xl border border-stone-600 active:scale-95">View the Itinerary</button>
         </div>
-        <div id="cloud-sync-indicator" class="mt-8 text-[9px] text-emerald-500/50 uppercase tracking-widest font-bold transition-colors">● Live Sheet Database Active</div>
+        <div id="cloud-sync-indicator" class="mt-8 text-[9px] text-emerald-500/50 uppercase tracking-widest font-bold transition-colors">● Live Cloud Database Active</div>
     </div>
 
     <!-- Matches View -->
@@ -133,10 +133,13 @@
         <main id="itinerary-content" class="flex-grow max-w-4xl w-full mx-auto p-4 md:p-8"></main>
     </div>
 
-    <script>
-        // --- 1. CONFIG & GLOBALS ---
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxHx57E9xAJQWaPZR6pD0-wyqlDgWgrspFXQBX4w6FBk3AKlWgyjannookXNK9_dO8uQA/exec"; 
+    <!-- MAIN APPLICATION SCRIPT (Uses Firebase as Backend) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // --- 1. CONFIG & GLOBALS ---
         const PLAYERS = ["GC", "PI", "SW", "CF"]; 
         const FULL_NAMES = { "GC": "Greg", "PI": "Parker", "SW": "Scott", "CF": "Craig" };
         
@@ -208,46 +211,27 @@
             holes: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSWo3Yh7t25FQHKWbwOwlBMqlS0KvH89mCw494kbiHakFe7jbmTxHwu4V6oRwI0_E6upPCv9MgwN23i/pub?gid=1612329092&single=true&output=csv'
         };
 
-        // --- 2. DATA PIPELINE ---
+        // --- 2. FIREBASE SETUP & AUTH ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-        async function fetchLiveStorage(url) {
-            try {
-                const response = await fetch(url + "?nocache=" + Date.now());
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                console.error("Fetch failed:", error);
-                throw error;
-            }
-        }
-
-        function parseCSVData(url) {
-            return new Promise((resolve, reject) => {
-                Papa.parse(url, {
-                    download: true,
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: (results) => resolve(results.data),
-                    error: (err) => reject(err)
-                });
-            });
-        }
-
-        async function fetchInitialData() {
+        async function initApp() {
             const subtext = document.getElementById('loading-subtext');
             try {
-                if (subtext) {
-                    subtext.innerText = "Fetching Itinerary & Course Data...";
+                // Step 1: Authenticate
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
                 }
-                
-                const [itn, mtch, hls] = await Promise.all([
-                    parseCSVData(sheetUrls.itinerary),
-                    parseCSVData(sheetUrls.matches),
-                    parseCSVData(sheetUrls.holes)
-                ]);
+
+                // Step 2: Fetch static CSV data for Itinerary and Course Info
+                if (subtext) subtext.innerText = "Fetching Itinerary & Course Data...";
+                const fetchCSV = (url) => new Promise((res, rej) => Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: (r) => res(r.data), error: rej }));
+                const [itn, mtch, hls] = await Promise.all([fetchCSV(sheetUrls.itinerary), fetchCSV(sheetUrls.matches), fetchCSV(sheetUrls.holes)]);
 
                 state.matches = mtch.map(m => {
                     const mId = String(m.matchId || m.id || '').trim();
@@ -275,93 +259,49 @@
                         const mDate = String(m.date).toLowerCase().trim();
                         const iDate = String(day.date).toLowerCase().trim();
                         return mDate.includes(iDate) || iDate.includes(mDate);
-                    }).map(m => ({ 
-                        course: m.course, 
-                        time: m.teeTime, 
-                        matchId: m.id 
-                    }));
+                    }).map(m => ({ course: m.course, time: m.teeTime, matchId: m.id }));
 
                     return {
-                        day: day.day, 
-                        date: day.date, 
-                        quote: day.quote, 
-                        wakeUp: day.wakeUp, 
-                        sleep: day.sleep,
+                        day: day.day, date: day.date, quote: day.quote, wakeUp: day.wakeUp, sleep: day.sleep,
                         golf: mappedGolf,
-                        intel: { 
-                            city: day.intel_city, 
-                            description: day.intel_desc, 
-                            hotel: day.intel_hotel, 
-                            hotspots: day.intel_hotspots ? day.intel_hotspots.split('|') : [] 
-                        }
+                        intel: { city: day.intel_city, description: day.intel_desc, hotel: day.intel_hotel, hotspots: day.intel_hotspots ? day.intel_hotspots.split('|') : [] }
                     };
                 });
 
-                if (state.matches.length > 0) {
-                    state.currentCourseId = state.matches[0].id;
-                }
+                if (state.matches.length > 0) state.currentCourseId = state.matches[0].id;
 
-                if (subtext) {
-                    subtext.innerText = "Loading Live Scores...";
-                }
-                
-                try {
-                    const data = await fetchLiveStorage(GAS_WEB_APP_URL);
-                    if (Array.isArray(data)) {
-                        data.forEach(row => {
-                            if (row.category === 'matchData') {
-                                if (!state.matchData[row.courseId]) {
-                                    state.matchData[row.courseId] = {};
-                                }
-                                state.matchData[row.courseId][row.key] = row.value;
-                            } else if (row.category === 'sideBets') {
-                                if (!state.sideBets[row.courseId]) {
-                                    state.sideBets[row.courseId] = {};
-                                }
-                                try { 
-                                    state.sideBets[row.courseId][row.key] = JSON.parse(row.value); 
-                                } catch(parseError) {
-                                    console.warn("Could not parse sideBets json");
-                                }
-                            } else if (row.category === 'beltPoints') {
-                                if (!state.beltPoints[row.courseId]) {
-                                    state.beltPoints[row.courseId] = {};
-                                }
-                                state.beltPoints[row.courseId][row.key] = row.value;
-                            } else if (row.category === 'finalScores') {
-                                if (!state.finalScores[row.courseId]) {
-                                    state.finalScores[row.courseId] = {};
-                                }
-                                state.finalScores[row.courseId][row.key] = row.value;
-                            } else if (row.category === 'handicaps') {
-                                if (!state.handicaps[row.courseId]) {
-                                    state.handicaps[row.courseId] = {};
-                                }
-                                state.handicaps[row.courseId][row.key] = row.value;
-                            }
-                        });
-                    }
-                } catch (liveError) {
-                    console.warn("Live database failed to load. Continuing with static data.", liveError);
-                    const indicator = document.getElementById('cloud-sync-indicator');
-                    if (indicator) {
-                        indicator.innerText = "● Offline Mode - Check Apps Script URL";
-                        indicator.classList.add('text-amber-500');
-                    }
-                }
+                // Step 3: Setup Real-time Database Listeners
+                if (subtext) subtext.innerText = "Synchronizing Live Data...";
+                setupLiveListeners();
 
+                // Finish Load
                 document.getElementById('view-loading').classList.add('hidden');
                 document.getElementById('view-hub').classList.remove('hidden');
 
-            } catch (e) { 
-                console.error("Critical Load Error:", e); 
-                if (subtext) {
-                    subtext.innerHTML = `<span class="text-red-500">Critical Error. Check CSV Public Access.</span>`;
-                }
+            } catch (error) {
+                console.error("Initialization Error:", error);
+                if (subtext) subtext.innerHTML = `<span class="text-red-500">Critical Error. Failed to load.</span>`;
             }
         }
 
-        async function postToSheet(params) {
+        // --- 3. LIVE DATABASE LOGIC ---
+        function setupLiveListeners() {
+            const collectionsToSync = ['matchData', 'sideBets', 'beltPoints', 'finalScores', 'handicaps'];
+            
+            collectionsToSync.forEach(colName => {
+                const colRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
+                onSnapshot(colRef, (snapshot) => {
+                    snapshot.forEach(docSnap => {
+                        state[colName][docSnap.id] = docSnap.data();
+                    });
+                    renderActiveView(); // Instantly update UI when data changes
+                }, (error) => {
+                    console.error(`Live Sync Error for ${colName}:`, error);
+                });
+            });
+        }
+
+        async function syncToCloud(collectionName, docId, dataToSave) {
             const indicator = document.getElementById('cloud-sync-indicator');
             if (indicator) {
                 indicator.innerText = "● Syncing to Cloud...";
@@ -370,19 +310,16 @@
             }
 
             try {
-                await fetch(GAS_WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify(params)
-                });
+                // Using merge: true so we don't accidentally overwrite other fields in the doc
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, docId), dataToSave, { merge: true });
                 
                 setTimeout(() => {
                     if (indicator) {
-                        indicator.innerText = "● Live Sheet Database Active";
+                        indicator.innerText = "● Live Database Active";
                         indicator.classList.remove('text-amber-500');
                         indicator.classList.add('text-emerald-500/50');
                     }
-                }, 1500);
+                }, 1000);
             } catch (e) { 
                 console.error("Save Error:", e); 
                 if (indicator) {
@@ -392,95 +329,70 @@
             }
         }
 
-        // --- 3. CLOUD SAVE WRAPPERS ---
-        function saveMatchPoint(crsId, hole, val) {
-            if (!state.matchData[crsId]) {
-                state.matchData[crsId] = {};
-            }
+        // Exposing saving wrappers to window so HTML onclicks can trigger them
+        window.saveMatchPoint = (crsId, hole, val) => {
+            if (!state.matchData[crsId]) state.matchData[crsId] = {};
             state.matchData[crsId][hole] = val;
-            postToSheet({ category: 'matchData', courseId: crsId, key: String(hole), value: val });
-            updateScore();
-        }
+            syncToCloud('matchData', crsId, state.matchData[crsId]);
+            // updateScore is triggered locally for immediate feel, though listener handles it too
+            updateScore(); 
+        };
 
-        function saveSideBet(betId, amt, won) {
+        window.saveSideBet = (betId, amt, won) => {
             const cId = state.currentCourseId;
-            if (!state.sideBets[cId]) {
-                state.sideBets[cId] = {};
-            }
-            if (!state.sideBets[cId][betId]) {
-                state.sideBets[cId][betId] = { amount: 0, won: false };
-            }
-            if (amt !== null) {
-                state.sideBets[cId][betId].amount = parseFloat(amt) || 0;
-            }
-            if (won !== null) {
-                state.sideBets[cId][betId].won = won;
-            }
-            postToSheet({ category: 'sideBets', courseId: cId, key: betId, value: JSON.stringify(state.sideBets[cId][betId]) });
-            renderJuiceTable();
-        }
+            if (!state.sideBets[cId]) state.sideBets[cId] = {};
+            if (!state.sideBets[cId][betId]) state.sideBets[cId][betId] = { amount: 0, won: false };
+            if (amt !== null) state.sideBets[cId][betId].amount = parseFloat(amt) || 0;
+            if (won !== null) state.sideBets[cId][betId].won = won;
+            syncToCloud('sideBets', cId, state.sideBets[cId]);
+        };
 
-        function saveBeltScore(crsId, player, val) {
-            if (!state.beltPoints[crsId]) {
-                state.beltPoints[crsId] = {};
-            }
+        window.saveBeltScore = (crsId, player, val) => {
+            if (!state.beltPoints[crsId]) state.beltPoints[crsId] = {};
             state.beltPoints[crsId][player] = parseInt(val) || 0;
-            postToSheet({ category: 'beltPoints', courseId: crsId, key: player, value: String(val) });
-            viewBeltPoints();
-        }
+            syncToCloud('beltPoints', crsId, state.beltPoints[crsId]);
+        };
 
-        function saveFinalScore(crsId, player, val) {
-            if (!state.finalScores[crsId]) {
-                state.finalScores[crsId] = {};
-            }
+        window.saveFinalScore = (crsId, player, val) => {
+            if (!state.finalScores[crsId]) state.finalScores[crsId] = {};
             state.finalScores[crsId][player] = parseInt(val) || 0;
-            postToSheet({ category: 'finalScores', courseId: crsId, key: player, value: String(val) });
-            renderFinalScores();
-        }
+            syncToCloud('finalScores', crsId, state.finalScores[crsId]);
+        };
 
-        function saveHandicap(crsId, player, val) {
-            if (!state.handicaps[crsId]) {
-                state.handicaps[crsId] = {};
-            }
+        window.saveHandicap = (crsId, player, val) => {
+            if (!state.handicaps[crsId]) state.handicaps[crsId] = {};
             state.handicaps[crsId][player] = parseInt(val) || 0;
-            postToSheet({ category: 'handicaps', courseId: crsId, key: player, value: String(val) });
-            renderFinalScores();
-        }
+            syncToCloud('handicaps', crsId, state.handicaps[crsId]);
+        };
 
-        // --- 4. NAVIGATION & RENDERING ---
+        // --- 4. UI RENDERING & NAVIGATION ---
         function formatYouTubeUrl(url) {
             if (!url) return '';
             let v = '';
-            if (url.includes('embed/')) {
-                v = url.split('embed/')[1].split('?')[0];
-            } else if (url.includes('youtu.be/')) {
-                v = url.split('youtu.be/')[1].split('?')[0];
-            } else if (url.includes('watch?v=')) {
-                v = url.split('watch?v=')[1].split('&')[0];
-            }
+            if (url.includes('embed/')) v = url.split('embed/')[1].split('?')[0];
+            else if (url.includes('youtu.be/')) v = url.split('youtu.be/')[1].split('?')[0];
+            else if (url.includes('watch?v=')) v = url.split('watch?v=')[1].split('&')[0];
             return v ? `https://www.youtube.com/embed/${v}?autoplay=1&mute=1` : url;
         }
 
-        function navigateTo(viewId) {
+        window.navigateTo = (viewId) => {
             ['hub', 'matches', 'itinerary'].forEach(id => {
                 const el = document.getElementById('view-' + id);
                 if (el) el.classList.add('hidden');
             });
             const target = document.getElementById('view-' + viewId);
-            if (target) {
-                target.classList.remove('hidden');
-            }
+            if (target) target.classList.remove('hidden');
 
             if (viewId === 'matches') {
                 renderMatchesNav();
-                switchCourse(state.currentCourseId);
+                window.switchCourse(state.currentCourseId);
             }
             if (viewId === 'itinerary') {
                 renderItineraryNav();
                 renderItineraryContent();
             }
             window.scrollTo(0, 0);
-        }
+        };
 
         function renderMatchesNav() {
             let html = `<button onclick="viewLedger()" id="tab-ledger" class="course-tab whitespace-nowrap px-4 py-4 text-xs font-bold uppercase tracking-tighter text-amber-600">🧃 Juice</button>`;
@@ -499,7 +411,7 @@
             document.getElementById('final-scores-section').classList.add('hidden');
         }
 
-        function viewBeltPoints() {
+        window.viewBeltPoints = () => {
             clearTabs();
             state.activeTab = 'belt';
             document.getElementById('tab-belt').classList.add('tab-active');
@@ -522,7 +434,6 @@
             sorted.forEach((e, i) => ranks[e[0]] = i + 1);
             
             let headerRow = PLAYERS.map(p => `<th class="pb-2">${p}</th>`).join('');
-            
             let footerRow = PLAYERS.map(p => {
                 const rankSuffix = ['st','nd','rd','th'][ranks[p] - 1] || 'th';
                 return `<td class="text-center"><div class="text-lg">${sums[p]}</div><div class="text-[9px] text-blue-400">${ranks[p]}${rankSuffix}</div></td>`;
@@ -539,23 +450,15 @@
                     </div>
                     <div class="p-4 overflow-x-auto">
                         <table class="w-full border-collapse">
-                            <thead>
-                                <tr class="text-stone-400 text-[10px] uppercase font-bold border-b">
-                                    <th class="text-left pb-2">Course</th>
-                                    ${headerRow}
-                                </tr>
-                            </thead>
+                            <thead><tr class="text-stone-400 text-[10px] uppercase font-bold border-b"><th class="text-left pb-2">Course</th>${headerRow}</tr></thead>
                             <tbody>${rows}</tbody>
-                            <tr class="bg-stone-900 text-white font-black">
-                                <td class="p-4 text-[10px] uppercase">Rank</td>
-                                ${footerRow}
-                            </tr>
+                            <tr class="bg-stone-900 text-white font-black"><td class="p-4 text-[10px] uppercase">Rank</td>${footerRow}</tr>
                         </table>
                     </div>
                 </div>`;
-        }
+        };
 
-        function viewNextRound() {
+        window.viewNextRound = () => {
             clearTabs();
             state.activeTab = 'next';
             document.getElementById('tab-next').classList.add('tab-active');
@@ -563,13 +466,7 @@
                 <div class="bg-stone-950 rounded-3xl shadow-2xl p-10 text-center fade-in">
                     <div class="mb-10">
                         <div class="inline-block p-5 rounded-full bg-emerald-500/10 mb-6 border border-emerald-500/20">
-                            <svg class="w-16 h-16 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path d="M7 21h10a2 2 0 0 0 2-2l1-13H4l1 13a2 2 0 0 0 2 2Z" stroke-width="1.5"/>
-                                <path d="M12 6v15" stroke-width="1.5"/>
-                                <path d="M15 6v15" stroke-width="1.5"/>
-                                <path d="M9 6v15" stroke-width="1.5"/>
-                                <path d="M19 6V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v1" stroke-width="1.5"/>
-                            </svg>
+                            <svg class="w-16 h-16 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 0 0 2-2l1-13H4l1 13a2 2 0 0 0 2 2Z" stroke-width="1.5"/><path d="M12 6v15" stroke-width="1.5"/><path d="M15 6v15" stroke-width="1.5"/><path d="M9 6v15" stroke-width="1.5"/><path d="M19 6V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v1" stroke-width="1.5"/></svg>
                         </div>
                         <h2 class="serif text-4xl text-white italic font-bold">The Round Selection</h2>
                         <p class="text-stone-500 text-[10px] font-bold uppercase tracking-[0.4em] mt-3">Designating the Patron of the Pub</p>
@@ -579,9 +476,9 @@
                     </div>
                     <button onclick="pickNextRoundSponsor()" class="golf-gradient w-full py-7 rounded-2xl text-white font-black uppercase tracking-[0.3em] active:scale-95 transition-all text-center">Pick the Host!</button>
                 </div>`;
-        }
+        };
 
-        function pickNextRoundSponsor() {
+        window.pickNextRoundSponsor = () => {
             const unlucky = PLAYERS[Math.floor(Math.random() * PLAYERS.length)];
             const toast = TOASTS[Math.floor(Math.random() * TOASTS.length)];
             document.getElementById('next-round-result').innerHTML = `
@@ -592,9 +489,9 @@
                         <p class="text-stone-400 text-sm leading-relaxed italic">"${toast}"</p>
                     </div>
                 </div>`;
-        }
+        };
 
-        function switchCourse(id) {
+        window.switchCourse = (id) => {
             if (!id) return;
             state.activeTab = 'matches';
             state.currentCourseId = id;
@@ -603,12 +500,11 @@
             clearTabs();
             
             const tab = document.getElementById('tab-' + id);
-            if (tab) {
-                tab.classList.add('tab-active', 'text-stone-900');
-            }
+            if (tab) tab.classList.add('tab-active', 'text-stone-900');
             
             document.getElementById('score-banner').classList.remove('hidden');
             document.getElementById('juice-section').classList.remove('hidden');
+            document.getElementById('final-scores-section').classList.remove('hidden');
             
             let holesHtml = course.holes.map(h => {
                 const selectedVal = (state.matchData[id] && state.matchData[id][h.number]) || "";
@@ -647,12 +543,10 @@
                     <div class="divide-y divide-stone-100">${holesHtml}</div>
                 </div>`;
             
-            document.getElementById('final-scores-section').classList.remove('hidden');
             renderFinalScores();
-            
             updateScore();
             renderJuiceTable();
-        }
+        };
 
         function renderFinalScores() {
             const container = document.getElementById('final-scores-container');
@@ -660,11 +554,8 @@
             
             const crsId = state.currentCourseId;
             let html = '<table class="w-full text-xs border-collapse min-w-[300px]">';
-            
             html += '<thead><tr class="text-stone-400 border-b"><th class="p-3 w-20 text-left"></th>';
-            PLAYERS.forEach(p => {
-                html += `<th class="p-3 text-center bg-stone-50 font-bold text-stone-700">${p}</th>`;
-            });
+            PLAYERS.forEach(p => { html += `<th class="p-3 text-center bg-stone-50 font-bold text-stone-700">${p}</th>`; });
             html += '</tr></thead><tbody>';
 
             // Gross Row
@@ -691,13 +582,11 @@
                 const net = gross > 0 ? (gross - hdcp) : '-';
                 html += `<td class="p-3 text-center font-black text-emerald-700 text-base">${net}</td>`;
             });
-            html += '</tr>';
-
-            html += '</tbody></table>';
+            html += '</tr></tbody></table>';
             container.innerHTML = html;
         }
 
-        function viewLedger() {
+        window.viewLedger = () => {
             state.activeTab = 'ledger';
             clearTabs();
             document.getElementById('tab-ledger').classList.add('tab-active');
@@ -710,13 +599,11 @@
                     </div>
                 </div>`;
             renderJuiceTable();
-        }
+        };
 
         function updateScore() {
             if (state.activeTab !== 'matches') return;
-            
-            let a = 0;
-            let b = 0; 
+            let a = 0; let b = 0; 
             const d = state.matchData[state.currentCourseId] || {};
             
             Object.values(d).forEach(v => {
@@ -737,9 +624,7 @@
 
         function renderJuiceTable() {
             const h = document.getElementById('juice-table-header');
-            if (h) {
-                h.innerHTML = `<th class="p-3 w-16"></th>` + PLAYERS.map(p => `<th class="p-3 text-center bg-stone-50">${p}</th>`).join('');
-            }
+            if (h) h.innerHTML = `<th class="p-3 w-16"></th>` + PLAYERS.map(p => `<th class="p-3 text-center bg-stone-50">${p}</th>`).join('');
             
             const t = document.getElementById('juice-table');
             if (!t) return;
@@ -812,7 +697,6 @@
         function renderItineraryNav() {
             const tabsContainer = document.getElementById('itinerary-tabs');
             if (!tabsContainer) return;
-
             tabsContainer.innerHTML = state.itinerary.map((d, i) => {
                 const activeClasses = state.currentDayIdx === i 
                     ? 'bg-white text-emerald-950 border-white shadow-md scale-105' 
@@ -865,11 +749,9 @@
                             Day ${state.currentDayIdx + 1}
                         </div>
                     </div>
-                    
                     <div class="mb-8 border-l-4 border-amber-400 pl-5 py-2 bg-stone-50 rounded-r-xl pr-4">
                         <p class="serif text-lg italic text-stone-700 leading-snug">"${d.quote}"</p>
                     </div>
-                    
                     <div class="grid grid-cols-2 gap-4 mb-6">
                         <div class="bg-stone-50 p-4 rounded-2xl border border-stone-100 flex items-center space-x-3">
                             <div class="text-amber-500">☀️</div>
@@ -886,9 +768,7 @@
                             </div>
                         </div>
                     </div>
-                    
                     ${golf}
-                    
                     <div class="bg-gradient-to-br from-amber-50 to-orange-50/50 rounded-2xl border border-amber-200/60 p-6 shadow-sm">
                         <div class="flex items-center space-x-2 mb-2 text-amber-800">
                             <h3 class="font-serif font-bold text-xl">City Guide: ${d.intel.city}</h3>
@@ -909,8 +789,14 @@
             navigateTo('matches'); 
         };
 
+        function renderActiveView() {
+            if (state.activeTab === 'belt') viewBeltPoints();
+            else if (state.activeTab === 'ledger') viewLedger();
+            else if (state.activeTab === 'matches' && state.currentCourseId) window.switchCourse(state.currentCourseId);
+        }
+
         // STARTUP
-        fetchInitialData();
+        initApp();
     </script>
 </body>
 </html>
