@@ -44,6 +44,7 @@
         <p id="loading-subtext" class="text-stone-500 text-[10px] uppercase tracking-widest mt-4 font-bold">Synchronizing Real-Time Cloud</p>
     </div>
 
+    <!-- Hub View -->
     <div id="view-hub" class="hidden fixed inset-0 z-[100] bg-stone-950 flex flex-col items-center justify-center p-6 text-center">
         <div class="mb-12 fade-in">
             <h1 class="serif text-6xl md:text-8xl text-white italic mb-4 leading-tight">This is 50.</h1>
@@ -54,8 +55,13 @@
             <button onclick="navigateTo('itinerary')" class="w-full py-6 bg-stone-800 hover:bg-stone-700 text-white rounded-2xl font-bold uppercase tracking-widest transition-all shadow-2xl border border-stone-600 active:scale-95">View the Itinerary</button>
         </div>
         <div id="cloud-sync-indicator" class="mt-8 text-[9px] text-emerald-500/50 uppercase tracking-widest font-bold transition-colors">● Live Cloud Database Active</div>
+        
+        <div class="absolute bottom-6 text-center text-stone-500 text-[10px] tracking-widest uppercase fade-in" style="animation-delay: 0.3s">
+            This Trip is Powered by <button onclick="navigateTo('boystrip')" class="text-emerald-500 font-bold hover:underline transition-all">BoysTrip</button>
+        </div>
     </div>
 
+    <!-- Matches View -->
     <div id="view-matches" class="hidden min-h-screen pb-12 flex flex-col">
         <header class="bg-stone-900 text-white py-10 px-6 text-center shadow-2xl relative">
             <button onclick="navigateTo('hub')" class="absolute left-4 top-4 text-stone-400 text-[10px] font-bold uppercase tracking-widest border border-stone-700 px-3 py-2 rounded-lg hover:bg-stone-800 transition">← Hub</button>
@@ -114,10 +120,14 @@
             </section>
         </main>
         <footer class="text-center py-6">
-            <p class="text-slate-400 text-[8px] tracking-widest uppercase">&copy; 2026 FAKC • Flatson Ass Kicking Corp</p>
+            <p class="text-slate-400 text-[8px] tracking-widest uppercase mb-2">&copy; 2026 FAKC • Flatson Ass Kicking Corp</p>
+            <p class="text-slate-500 text-[10px] tracking-widest uppercase">
+                This Trip is Powered by <button onclick="navigateTo('boystrip')" class="text-emerald-600 font-bold hover:underline transition-all">BoysTrip</button>
+            </p>
         </footer>
     </div>
 
+    <!-- Itinerary View -->
     <div id="view-itinerary" class="hidden min-h-screen flex flex-col">
         <header class="bg-emerald-950 text-white shadow-xl sticky top-0 z-[60]">
             <div class="max-w-4xl mx-auto px-4 py-6 flex items-center justify-between">
@@ -133,6 +143,31 @@
             </div>
         </header>
         <main id="itinerary-content" class="flex-grow max-w-4xl w-full mx-auto p-4 md:p-8"></main>
+        <footer class="text-center py-6 bg-transparent">
+            <p class="text-slate-500 text-[10px] tracking-widest uppercase">
+                This Trip is Powered by <button onclick="navigateTo('boystrip')" class="text-emerald-600 font-bold hover:underline transition-all">BoysTrip</button>
+            </p>
+        </footer>
+    </div>
+
+    <!-- BoysTrip About View -->
+    <div id="view-boystrip" class="hidden min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+        <div class="max-w-lg mx-auto fade-in">
+            <img src="logo.png" alt="BoysTrip Logo" class="w-48 mx-auto mb-8" onerror="this.style.display='none';">
+            <h2 class="serif text-5xl text-stone-900 font-bold mb-8 italic">BoysTrip</h2>
+            
+            <p class="text-stone-700 text-lg mb-6 leading-relaxed font-medium">
+                BoysTrip is the ultimate trip companion for a group who, let's be honest likely can't organize a two car parade and forgot to take out money before the trip.
+            </p>
+            
+            <p class="text-stone-500 text-sm mb-12 leading-relaxed">
+                Tell your crew when they need to be, where they need to be, and how much they owe you when you work them over on the links. All the details, and few more surprises, packed into one little, customizable trip app.
+            </p>
+            
+            <button onclick="navigateBack()" class="py-4 px-10 bg-stone-900 hover:bg-stone-800 text-white rounded-xl font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 border border-stone-700">
+                Take Me Back
+            </button>
+        </div>
     </div>
 
     <script type="module">
@@ -209,7 +244,8 @@
         let state = {
             matches: [], itinerary: [], matchData: {}, sideBets: {}, 
             beltPoints: {}, finalScores: {}, handicaps: {}, timeMachine: {},
-            currentCourseId: null, currentDayIdx: 0, activeTab: 'matches'
+            currentCourseId: null, currentDayIdx: 0, activeTab: 'matches',
+            currentView: 'hub', previousView: 'hub'
         };
 
         const sheetUrls = {
@@ -338,11 +374,22 @@
         }
 
         window.navigateTo = (vid) => {
-            ['hub', 'matches', 'itinerary'].forEach(id => document.getElementById('view-' + id).classList.add('hidden'));
-            document.getElementById('view-' + vid).classList.remove('hidden');
+            if (state.currentView !== vid) {
+                state.previousView = state.currentView;
+                state.currentView = vid;
+            }
+            
+            ['hub', 'matches', 'itinerary', 'boystrip'].forEach(id => document.getElementById('view-' + id).classList.add('hidden'));
+            const target = document.getElementById('view-' + vid);
+            if (target) target.classList.remove('hidden');
+
             if (vid === 'matches') renderMatchesNav(), window.switchCourse(state.currentCourseId);
             if (vid === 'itinerary') renderItineraryNav(), renderItineraryContent();
             window.scrollTo(0, 0);
+        };
+        
+        window.navigateBack = () => {
+            window.navigateTo(state.previousView || 'hub');
         };
 
         function renderMatchesNav() {
@@ -463,6 +510,7 @@
             state.activeTab = 'matches';
             state.currentCourseId = id;
             const course = state.matches.find(c => c.id === id);
+            
             if (!course) return; 
 
             clearTabs();
