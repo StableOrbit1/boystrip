@@ -6,7 +6,7 @@
     <title>BoysTrip | The Ultimate Tour Companion</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" hrefå="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -257,8 +257,13 @@
                 const itnSnap = await getDocs(collection(db, 'trips', code, 'itinerary'));
                 state.itinerary = [];
                 itnSnap.forEach(d => state.itinerary.push(d.data()));
-                // Sort by date strings to keep chronological order
-                state.itinerary.sort((a,b) => (a.date || "").localeCompare(b.date || ""));
+                
+                // Sort by actual date values instead of alphabetical strings
+                state.itinerary.sort((a, b) => {
+                    const timeA = new Date(a.date).getTime() || 0;
+                    const timeB = new Date(b.date).getTime() || 0;
+                    return timeA - timeB;
+                });
 
                 // Fetch Matches Sub-collection
                 const mtchSnap = await getDocs(collection(db, 'trips', code, 'matches'));
@@ -268,8 +273,13 @@
                     mData.id = d.id; // Assign Firestore ID to the match for tracking
                     state.matches.push(mData);
                 });
-                // Sort by date strings
-                state.matches.sort((a,b) => (a.date || "").localeCompare(b.date || ""));
+                
+                // Sort matches by actual date values
+                state.matches.sort((a, b) => {
+                    const timeA = new Date(a.date).getTime() || 0;
+                    const timeB = new Date(b.date).getTime() || 0;
+                    return timeA - timeB;
+                });
 
                 if (state.matches.length > 0) state.currentCourseId = state.matches[0].id;
 
