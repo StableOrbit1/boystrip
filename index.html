@@ -6,7 +6,7 @@
     <title>BoysTrip | The Ultimate Tour Companion</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" hrefå="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -294,7 +294,7 @@
         // --- 4. REAL-TIME DATA ---
         function setupLiveListeners() {
             ['matchData', 'sideBets', 'beltPoints', 'finalScores', 'handicaps', 'timeMachine'].forEach(colName => {
-                onSnapshot(collection(db, 'trips', activeTripId, 'ledger', colName), (snap) => {
+                onSnapshot(collection(db, 'trips', activeTripId, colName), (snap) => {
                     snap.forEach(docSnap => { state[colName][docSnap.id] = docSnap.data(); });
                     if (state.currentView === 'matches') renderActiveView();
                 });
@@ -305,8 +305,7 @@
             const ind = document.getElementById('cloud-sync-indicator');
             if (ind) { ind.innerText = "● Syncing..."; ind.className = "mt-8 text-[9px] text-amber-500 uppercase tracking-widest font-bold"; }
             try {
-                // Notice the new nested path!
-                await setDoc(doc(db, 'trips', activeTripId, 'ledger', colName, docId), data, { merge: true });
+                await setDoc(doc(db, 'trips', activeTripId, colName, docId), data, { merge: true });
                 setTimeout(() => { if (ind) { ind.innerText = "● Live Cloud Database Active"; ind.className = "mt-8 text-[9px] text-emerald-500/50 uppercase tracking-widest font-bold"; } }, 1000);
             } catch (e) {
                 if (ind) { ind.innerText = "● Sync Error: " + e.code; ind.className = "mt-8 text-[9px] text-rose-500 uppercase tracking-widest font-bold"; }
