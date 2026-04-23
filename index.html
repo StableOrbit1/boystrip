@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BoysTrip | Loading Tour...</title>
+    <title>BoysTrip | The Ultimate Tour Companion</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap" rel="stylesheet">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -22,7 +21,6 @@
             }
         }
     </script>
-
     <style>
         body { background-color: #f5f5f4; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .serif { font-family: 'Playfair Display', serif; }
@@ -57,8 +55,8 @@
     <!-- Hub View -->
     <div id="view-hub" class="hidden fixed inset-0 z-[100] bg-stone-950 flex flex-col items-center justify-center p-6 text-center">
         <div class="mb-12 fade-in">
-            <h1 id="hub-trip-title" class="serif text-6xl md:text-8xl text-white italic mb-4 leading-tight px-4"></h1>
-            <p id="hub-trip-desc" class="text-stone-500 tracking-[0.4em] uppercase text-[10px] font-bold"></p>
+            <h1 id="hub-trip-name" class="serif text-5xl md:text-7xl text-white italic mb-4 leading-tight px-4"></h1>
+            <p class="text-stone-500 tracking-[0.4em] uppercase text-[10px] font-bold">Official Tour App</p>
         </div>
         <div class="space-y-4 w-full max-w-sm fade-in" style="animation-delay: 0.1s">
             <button onclick="navigateTo('matches')" class="w-full py-6 bg-emerald-800 hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest transition-all shadow-2xl border border-emerald-600 active:scale-95">View the Golf Matches</button>
@@ -130,10 +128,7 @@
             </section>
         </main>
         <footer class="text-center py-6">
-            <p class="text-slate-400 text-[8px] tracking-widest uppercase mb-2">&copy; 2026 FAKC • Flatson Ass Kicking Corp</p>
-            <p class="text-slate-500 text-[10px] tracking-widest uppercase">
-                This Trip is Powered by <button onclick="navigateTo('boystrip')" class="text-emerald-600 font-bold hover:underline transition-all">BoysTrip</button>
-            </p>
+            <p class="text-slate-400 text-[8px] tracking-widest uppercase mb-2">&copy; 2026 BoysTrip</p>
         </footer>
     </div>
 
@@ -153,16 +148,12 @@
             </div>
         </header>
         <main id="itinerary-content" class="flex-grow max-w-4xl w-full mx-auto p-4 md:p-8"></main>
-        <footer class="text-center py-6 bg-transparent">
-            <p class="text-slate-500 text-[10px] tracking-widest uppercase">
-                This Trip is Powered by <button onclick="navigateTo('boystrip')" class="text-emerald-600 font-bold hover:underline transition-all">BoysTrip</button>
-            </p>
-        </footer>
     </div>
 
     <!-- BoysTrip About View -->
     <div id="view-boystrip" class="hidden min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
         <div class="max-w-xl mx-auto fade-in">
+            <!-- Ensure you upload a logo.png or this will hide safely -->
             <img src="logo.png" alt="BoysTrip Logo" class="w-[36rem] max-w-full mx-auto mb-8" onerror="this.style.display='none';">
             
             <p class="text-stone-700 text-lg mb-6 leading-relaxed font-medium">
@@ -200,8 +191,8 @@
 
         // --- 2. GLOBAL DATA & STATE ---
         let activeTripId = null;
-        let PLAYERS = []; // Populated dynamically from Firebase now
-        
+        let PLAYERS = []; // Populated dynamically
+        let liveListeners = []; // Tracks database listeners to clean them up on log out
         const SVG_PINT = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M7 21h10a2 2 0 0 0 2-2l1-13H4l1 13a2 2 0 0 0 2 2Z"></path><path d="M12 6v15"></path><path d="M15 6v15"></path><path d="M9 6v15"></path><path d="M19 6V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v1"></path></svg>`;
 
         const TOASTS = [
@@ -212,43 +203,7 @@
             "Sláinte mhath! (Good health!)",
             "There are no strangers here, only friends you haven't yet met.",
             "May you always have a clean shirt, a clear conscience, and a guinea in your pocket.",
-            "May the road rise up to meet you and the wind be always at your back.",
-            "May the roof above us never fall in, and may we friends gathered below never fall out.",
-            "Freedom and whisky gang thegither!",
-            "May you have the hindsight to know where you've been, the foresight to know where you're going, and the insight to know when you're going too far.",
-            "To a long life and a merry one. A quick death and an easy one. A pretty girl and an honest one. A cold beer and another one!",
-            "Here’s to being single, or here’s to being married, or here’s to being like me: somewhere in between!",
-            "May we never want a friend in need, nor a friend to help us.",
-            "To the world, you may be one person, but to one person you may be the world.",
-            "May your neighbors respect you, trouble neglect you, the angels protect you, and heaven accept you.",
-            "Here’s to the floor that never gives way, and the roof that never falls in.",
-            "May we always be as merry as we are today.",
-            "To absent friends. God bless them.",
-            "May you live as long as you want, and never want as long as you live.",
-            "Here’s to champagne for our real friends, and real pain for our sham friends.",
-            "May we always have a friend to buy us a drink, and a drink to buy a friend.",
-            "A glass in the hand is worth two on the shelf.",
-            "To good health, good wealth, and the time to enjoy them both.",
-            "May you work like you don't need the money, love like you've never been hurt, and dance like no one is watching.",
-            "Here’s to those who wish us well, and those who don't can go to... well, you know.",
-            "May the bridge you cross be the one you don't burn.",
-            "To the nights we can't remember, with the friends we'll never forget.",
-            "May your glass be ever full, and your heart be ever light.",
-            "Drink today, and drown all sorrow; you shall perhaps not do it tomorrow.",
-            "Here’s to a long life and a happy one. A quick death and an easy one.",
-            "To the friends we’ve made, the friends we’ve lost, and the friends we’re about to make.",
-            "May we always have the courage of our convictions and the conviction of our courage.",
-            "Here's to the liars, the cheaters, the thieves, and the drinkers.",
-            "May you lie only to save a friend.",
-            "May you cheat only death.",
-            "May you steal only a heart.",
-            "I have taken more out of alcohol than alcohol has taken out of me. — Winston Churchill",
-            "Work is the curse of the drinking classes. — Oscar Wilde",
-            "In victory, you deserve Champagne. In defeat, you need it. — Napoleon Bonaparte",
-            "Beer is proof that God loves us and wants us to be happy. — Benjamin Franklin",
-            "Here's to doing and drinking, not sitting and thinking.",
-            "To the best of times, which are always yet to come.",
-            "May your heart be light and your glass be heavy."
+            "May the road rise up to meet you and the wind be always at your back."
         ];
 
         let state = {
@@ -262,23 +217,23 @@
         async function boot() {
             try {
                 await signInAnonymously(auth);
+                // Check if the device remembers a previous tour code
+                const savedCode = localStorage.getItem('boysTripTourCode');
+                if (savedCode) {
+                    document.getElementById('trip-code-input').value = savedCode;
+                    loadTour(savedCode);
+                }
             } catch (err) {
                 document.getElementById('login-error').innerText = "Database connection failed. Please check network.";
                 document.getElementById('login-error').classList.remove('hidden');
             }
         }
 
-        document.getElementById('btn-join-trip').addEventListener('click', async () => {
+        // Extracted login logic to support both button clicks and auto-login
+        async function loadTour(code) {
             const btn = document.getElementById('btn-join-trip');
             const errorEl = document.getElementById('login-error');
             const loader = document.getElementById('loading-subtext');
-            const code = document.getElementById('trip-code-input').value.trim().toUpperCase();
-
-            if (!code) {
-                errorEl.innerText = "Please enter a valid Tour Code.";
-                errorEl.classList.remove('hidden');
-                return;
-            }
 
             btn.disabled = true;
             btn.innerText = "Locating Tour...";
@@ -296,13 +251,7 @@
                 state.trip = tripDoc.data();
                 PLAYERS = state.trip.players || [];
                 
-                // Dynamic Title and Description logic applied here!
-                const title = state.trip.tripName || "Elite Tour";
-                const desc = state.trip.tripDescription || "BoysTrip Powered Event";
-                
-                document.title = title;
-                document.getElementById('hub-trip-title').innerText = title;
-                document.getElementById('hub-trip-desc').innerText = desc;
+                document.getElementById('hub-trip-name').innerText = state.trip.tripName || "Elite Tour";
                 document.getElementById('itn-trip-dates').innerText = `${state.trip.startDate || ''} – ${state.trip.endDate || ''}`;
 
                 // Fetch Itinerary Sub-collection
@@ -310,7 +259,7 @@
                 state.itinerary = [];
                 itnSnap.forEach(d => state.itinerary.push(d.data()));
                 
-                // Sort by actual date values
+                // Sort by actual date values instead of alphabetical strings
                 state.itinerary.sort((a, b) => {
                     const timeA = new Date(a.date).getTime() || 0;
                     const timeB = new Date(b.date).getTime() || 0;
@@ -322,37 +271,30 @@
                 state.matches = [];
                 mtchSnap.forEach(d => {
                     let mData = d.data();
-                    mData.id = d.id;
+                    mData.id = d.id; // Assign Firestore ID to the match for tracking
                     state.matches.push(mData);
                 });
                 
-                // Sort matches by Date, then by Tee Time
+                // Sort matches by actual date values
                 state.matches.sort((a, b) => {
-                    const dateA = new Date(a.date).getTime() || 0;
-                    const dateB = new Date(b.date).getTime() || 0;
-                    
-                    if (dateA !== dateB) return dateA - dateB;
+                    const timeA = new Date(a.date).getTime() || 0;
+                    const timeB = new Date(b.date).getTime() || 0;
+                    if (timeA !== timeB) return timeA - timeB;
                     
                     const parseTime = (t) => {
                         const parsed = new Date(`1970/01/01 ${t}`).getTime();
                         return isNaN(parsed) ? 0 : parsed;
                     };
-                    return parseTime(a.teeTime || a.time) - parseTime(b.teeTime || b.time);
-                });
-
-                // Map the matches to itinerary days for display
-                state.itinerary.forEach(day => {
-                    day.golf = state.matches.filter(m => {
-                        const mD = String(m.date).toLowerCase().trim();
-                        const iD = String(day.date).toLowerCase().trim();
-                        return mD.includes(iD) || iD.includes(mD);
-                    }).map(m => ({ course: m.course, time: m.time, matchId: m.id }));
+                    return parseTime(a.time) - parseTime(b.time);
                 });
 
                 if (state.matches.length > 0) state.currentCourseId = state.matches[0].id;
 
                 // Wire up Real-Time LEDGER Listeners
                 setupLiveListeners();
+
+                // Save code locally to skip the login screen next time
+                localStorage.setItem('boysTripTourCode', code);
 
                 // Transition UI
                 document.getElementById('view-login').classList.add('hidden');
@@ -365,16 +307,35 @@
                 loader.classList.add('hidden');
                 errorEl.innerText = error.message;
                 errorEl.classList.remove('hidden');
+                // Remove invalid code if it somehow failed
+                localStorage.removeItem('boysTripTourCode');
             }
+        }
+
+        document.getElementById('btn-join-trip').addEventListener('click', () => {
+            const code = document.getElementById('trip-code-input').value.trim().toUpperCase();
+            if (!code) {
+                const errorEl = document.getElementById('login-error');
+                errorEl.innerText = "Please enter a valid Tour Code.";
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            loadTour(code);
         });
+
 
         // --- 4. REAL-TIME DATA ---
         function setupLiveListeners() {
+            // Disconnect old listeners if we swap tour codes
+            liveListeners.forEach(unsub => unsub()); 
+            liveListeners = [];
+            
             ['matchData', 'sideBets', 'beltPoints', 'finalScores', 'handicaps', 'timeMachine'].forEach(colName => {
-                onSnapshot(collection(db, 'trips', activeTripId, colName), (snap) => {
+                const unsub = onSnapshot(collection(db, 'trips', activeTripId, colName), (snap) => {
                     snap.forEach(docSnap => { state[colName][docSnap.id] = docSnap.data(); });
                     if (state.currentView === 'matches') renderActiveView();
                 });
+                liveListeners.push(unsub);
             });
         }
 
@@ -838,24 +799,77 @@
         function renderItineraryNav() {
             const tabsContainer = document.getElementById('itinerary-tabs');
             if (!tabsContainer) return;
-            tabsContainer.innerHTML = state.itinerary.map((d, i) => {
+            let html = state.itinerary.map((d, i) => {
                 const activeClasses = state.currentDayIdx === i 
                     ? 'bg-white text-emerald-950 border-white shadow-md scale-105' 
                     : 'bg-transparent text-emerald-100 border-emerald-800 hover:bg-emerald-900';
                 return `<button onclick="setDay(${i})" class="px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition border ${activeClasses}">${d.date}</button>`;
             }).join('');
+            
+            // Add the Help / Settings Tab to the end
+            const helpActive = state.currentDayIdx === 'help' 
+                ? 'bg-white text-emerald-950 border-white shadow-md scale-105' 
+                : 'bg-transparent text-emerald-100 border-emerald-800 hover:bg-emerald-900';
+            html += `<button onclick="setDay('help')" class="px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition border ${helpActive}">Help</button>`;
+
+            tabsContainer.innerHTML = html;
         }
 
         window.setDay = (i) => { state.currentDayIdx = i; renderItineraryNav(); renderItineraryContent(); };
 
+        window.resetTourCode = () => {
+            localStorage.removeItem('boysTripTourCode');
+            document.getElementById('trip-code-input').value = '';
+            
+            // Reset Button State
+            const btn = document.getElementById('btn-join-trip');
+            btn.disabled = false;
+            btn.innerText = "Join Tour";
+
+            state.currentDayIdx = 0;
+            navigateTo('login');
+        };
+
         function renderItineraryContent() {
+            // Render Settings/Help View
+            if (state.currentDayIdx === 'help') {
+                document.getElementById('itinerary-content').innerHTML = `
+                    <div class="bg-white rounded-3xl shadow-xl border border-stone-200 p-6 md:p-10 fade-in text-center mt-4">
+                        <div class="inline-block p-5 rounded-full bg-stone-100 mb-6 border border-stone-200">
+                            <span class="text-4xl">⚙️</span>
+                        </div>
+                        <h2 class="serif text-3xl font-bold text-stone-900 mb-4">Tour Settings</h2>
+                        <p class="text-stone-500 text-sm mb-8 max-w-md mx-auto">Your device currently remembers your Tour Code so you don't have to log in every time. If you need to access a different trip, you can clear it below.</p>
+                        <button onclick="resetTourCode()" class="py-4 px-8 bg-stone-900 hover:bg-stone-800 text-white rounded-xl font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 border border-stone-700">Enter New Tour Code</button>
+                    </div>`;
+                return;
+            }
+
             const d = state.itinerary[state.currentDayIdx]; 
             if (!d) return;
             
             let golf = '';
-            if (d.golf && d.golf.length > 0) {
-                const golfItems = d.golf.map(g => 
-                    `<button onclick="jumpToMatch('${g.matchId}')" class="w-full text-left flex justify-between items-center bg-emerald-800 rounded-xl p-4 mb-3 shadow-md border border-emerald-600">
+            
+            // Fix: Connect daily itinerary string matches to golf matches using strict date parsing
+            const dayGolfMatches = state.matches.filter(m => {
+                if (!m.date || !d.date) return false;
+                
+                const mStr = String(m.date).trim();
+                const iStr = String(d.date).trim();
+                
+                // Check 1: Strict string match (e.g., HTML5 pickers "2026-06-06")
+                if (mStr === iStr) return true;
+                
+                // Check 2: Parsed date match (Catches CSV imports like "June 6" vs "2026-06-06")
+                const parsedM = new Date(mStr).setHours(0,0,0,0);
+                const parsedI = new Date(iStr).setHours(0,0,0,0);
+                
+                return !isNaN(parsedM) && parsedM === parsedI;
+            });
+
+            if (dayGolfMatches.length > 0) {
+                const golfItems = dayGolfMatches.map(g => 
+                    `<button onclick="jumpToMatch('${g.id}')" class="w-full text-left flex justify-between items-center bg-emerald-800 rounded-xl p-4 mb-3 shadow-md border border-emerald-600">
                         <div>
                             <h4 class="font-bold text-lg text-white">${g.course}</h4>
                             <div class="text-emerald-300 text-xs font-bold uppercase mt-1">
