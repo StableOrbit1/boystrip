@@ -38,7 +38,8 @@
     <!-- Front Door: Trip Login -->
     <div id="view-login" class="fixed inset-0 z-[200] bg-stone-950 flex flex-col items-center justify-center p-6 text-center">
         <div class="max-w-sm w-full fade-in">
-            <h1 class="serif text-5xl text-white italic mb-2">BoysTrip</h1>
+            <img src="logo.png" alt="BoysTrip" class="w-full max-w-[32rem] mx-auto mb-6 drop-shadow-2xl" onerror="this.style.display='none'; document.getElementById('fallback-title').classList.remove('hidden');">
+            <h1 id="fallback-title" class="serif text-5xl text-white italic mb-2 hidden">BoysTrip</h1>
             <p class="text-emerald-500 tracking-[0.3em] uppercase text-[10px] font-bold mb-12">Enter Tour Code</p>
             
             <div class="bg-white/10 p-8 rounded-3xl border border-white/20 backdrop-blur-md shadow-2xl">
@@ -54,13 +55,17 @@
 
     <!-- Hub View -->
     <div id="view-hub" class="hidden fixed inset-0 z-[100] bg-stone-950 flex flex-col items-center justify-center p-6 text-center">
-        <div class="mb-12 fade-in">
+        <div class="mb-10 fade-in">
             <h1 id="hub-trip-name" class="serif text-5xl md:text-7xl text-white italic mb-4 leading-tight px-4"></h1>
-            <p class="text-stone-500 tracking-[0.4em] uppercase text-[10px] font-bold">Official Tour App</p>
+            <p id="hub-trip-desc" class="text-stone-500 tracking-[0.4em] uppercase text-[10px] font-bold">Official Tour App</p>
         </div>
         <div class="space-y-4 w-full max-w-sm fade-in" style="animation-delay: 0.1s">
             <button onclick="navigateTo('matches')" class="w-full py-6 bg-emerald-800 hover:bg-emerald-700 text-white rounded-2xl font-bold uppercase tracking-widest transition-all shadow-2xl border border-emerald-600 active:scale-95">View the Golf Matches</button>
             <button onclick="navigateTo('itinerary')" class="w-full py-6 bg-stone-800 hover:bg-stone-700 text-white rounded-2xl font-bold uppercase tracking-widest transition-all shadow-2xl border border-stone-600 active:scale-95">View the Itinerary</button>
+            
+            <button onclick="document.getElementById('add-to-home-modal').classList.remove('hidden')" class="w-full pt-4 pb-2 text-[10px] text-stone-400 uppercase tracking-widest font-bold hover:text-white transition flex items-center justify-center gap-2">
+                <span class="text-base">📲</span> Add to Home Screen
+            </button>
         </div>
         <div id="cloud-sync-indicator" class="mt-8 text-[9px] text-emerald-500/50 uppercase tracking-widest font-bold transition-colors">● Live Cloud Database Active</div>
         
@@ -152,9 +157,8 @@
 
     <!-- BoysTrip About View -->
     <div id="view-boystrip" class="hidden min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
-        <div class="max-w-xl mx-auto fade-in">
-            <!-- Ensure you upload a logo.png or this will hide safely -->
-            <img src="logo.png" alt="BoysTrip Logo" class="w-[36rem] max-w-full mx-auto mb-8" onerror="this.style.display='none';">
+        <div class="max-w-4xl mx-auto fade-in">
+            <img src="logo.png" alt="BoysTrip Logo" class="w-[72rem] max-w-full mx-auto mb-10" onerror="this.style.display='none';">
             
             <p class="text-stone-700 text-lg mb-6 leading-relaxed font-medium">
                 BoysTrip is the ultimate trip companion for a group who, let's be honest likely can't organize a two car parade and forgot to take out money before the trip.
@@ -167,6 +171,46 @@
             <button onclick="navigateBack()" class="py-4 px-10 bg-stone-900 hover:bg-stone-800 text-white rounded-xl font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 border border-stone-700">
                 Take Me Back
             </button>
+        </div>
+    </div>
+
+    <!-- MODAL: Add to Home Screen Instructions -->
+    <div id="add-to-home-modal" class="hidden fixed inset-0 z-[500] bg-stone-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="p-6 border-b border-stone-100 flex justify-between items-center bg-stone-50">
+                <div>
+                    <h3 class="serif text-xl font-bold text-stone-900">Install the App</h3>
+                    <p class="text-[10px] uppercase font-bold text-emerald-600 tracking-widest mt-1">Quick Access</p>
+                </div>
+                <button onclick="document.getElementById('add-to-home-modal').classList.add('hidden')" class="text-stone-400 hover:text-stone-900 text-xl font-black">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-6">
+                <!-- iOS Instructions -->
+                <div class="bg-stone-50 border border-stone-100 p-4 rounded-2xl">
+                    <h4 class="text-sm font-black uppercase tracking-widest text-stone-900 mb-3 flex items-center gap-2">
+                        <span>🍎</span> Apple iOS
+                    </h4>
+                    <ol class="text-xs text-stone-600 space-y-3 pl-5 list-decimal marker:font-bold marker:text-stone-400">
+                        <li>Tap the <strong>Share</strong> icon <svg class="inline w-4 h-4 mb-1 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> at the bottom of your Safari screen.</li>
+                        <li>Scroll down the menu and tap <strong>Add to Home Screen</strong> <svg class="inline w-4 h-4 mb-1 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>.</li>
+                        <li>Tap <strong>Add</strong> in the top right corner.</li>
+                    </ol>
+                </div>
+                <!-- Android Instructions -->
+                <div class="bg-stone-50 border border-stone-100 p-4 rounded-2xl">
+                    <h4 class="text-sm font-black uppercase tracking-widest text-emerald-700 mb-3 flex items-center gap-2">
+                        <span>🤖</span> Android
+                    </h4>
+                    <ol class="text-xs text-stone-600 space-y-3 pl-5 list-decimal marker:font-bold marker:text-emerald-500">
+                        <li>Tap the <strong>Menu</strong> icon (⋮) at the top right of your Chrome screen.</li>
+                        <li>Tap <strong>Add to Home screen</strong> or <strong>Install App</strong>.</li>
+                        <li>Follow the on-screen prompts to add it to your launcher.</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="p-4 bg-stone-50 flex border-t border-stone-100">
+                <button onclick="document.getElementById('add-to-home-modal').classList.add('hidden')" class="w-full py-4 text-stone-600 bg-white border border-stone-200 hover:bg-stone-100 rounded-xl font-bold uppercase tracking-widest text-xs transition shadow-sm active:scale-95">Got it</button>
+            </div>
         </div>
     </div>
 
@@ -251,7 +295,12 @@
                 state.trip = tripDoc.data();
                 PLAYERS = state.trip.players || [];
                 
-                document.getElementById('hub-trip-name').innerText = state.trip.tripName || "Elite Tour";
+                const title = state.trip.tripName || "Elite Tour";
+                const desc = state.trip.tripDescription || "BoysTrip Powered Event";
+                
+                document.title = title;
+                document.getElementById('hub-trip-name').innerText = title;
+                document.getElementById('hub-trip-desc').innerText = desc;
                 document.getElementById('itn-trip-dates').innerText = `${state.trip.startDate || ''} – ${state.trip.endDate || ''}`;
 
                 // Fetch Itinerary Sub-collection
@@ -840,7 +889,11 @@
                         </div>
                         <h2 class="serif text-3xl font-bold text-stone-900 mb-4">Tour Settings</h2>
                         <p class="text-stone-500 text-sm mb-8 max-w-md mx-auto">Your device currently remembers your Tour Code so you don't have to log in every time. If you need to access a different trip, you can clear it below.</p>
-                        <button onclick="resetTourCode()" class="py-4 px-8 bg-stone-900 hover:bg-stone-800 text-white rounded-xl font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 border border-stone-700">Enter New Tour Code</button>
+                        
+                        <div class="space-y-3 max-w-xs mx-auto">
+                            <button onclick="document.getElementById('add-to-home-modal').classList.remove('hidden')" class="w-full py-4 px-8 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl font-black uppercase tracking-widest transition-all shadow-sm active:scale-95 border border-emerald-200 text-xs">📲 Install App</button>
+                            <button onclick="resetTourCode()" class="w-full py-4 px-8 bg-stone-900 hover:bg-stone-800 text-white rounded-xl font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 border border-stone-700 text-xs">Enter New Tour Code</button>
+                        </div>
                     </div>`;
                 return;
             }
