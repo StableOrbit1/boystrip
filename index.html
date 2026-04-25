@@ -654,15 +654,16 @@
             let holesHtml = course.holes.map(h => {
                 const selectedVal = (state.matchData[id] && state.matchData[id][h.number]) || "";
                 return `
-                    <div class="p-4 md:p-5 bg-white border-b border-slate-100 flex justify-between items-center gap-4">
-                        <div class="flex items-center gap-3 md:gap-4 shrink overflow-hidden">
-                            <span class="font-display text-3xl md:text-4xl text-slate-300 font-bold shrink-0">#${h.number}</span>
-                            <div class="truncate">
+                    <div class="p-4 md:p-5 bg-white border-b border-slate-100 flex justify-between items-start gap-4">
+                        <div class="flex items-start gap-3 md:gap-4 flex-grow overflow-hidden">
+                            <span class="font-display text-3xl md:text-4xl text-slate-300 font-bold shrink-0 mt-0.5">#${h.number}</span>
+                            <div>
                                 <p class="text-[10px] font-bold uppercase text-slate-500 tracking-widest mb-0.5">Par ${h.par} • ${h.yardage} Yds</p>
-                                <p class="text-xs text-slate-700 truncate" title="${h.name}: ${h.tip}"><strong class="text-navy font-bold">${h.name}</strong> <span class="hidden md:inline text-slate-500 font-medium">- ${h.tip}</span></p>
+                                <p class="text-sm text-navy font-bold leading-tight ${h.tip ? 'mb-2' : ''}">${h.name || 'Fairway'}</p>
+                                ${h.tip ? `<p class="text-xs text-slate-600 leading-relaxed border-l-2 border-btgreen pl-3 py-1 pr-2 bg-slate-50 rounded-r-md italic">"${h.tip}"</p>` : ''}
                             </div>
                         </div>
-                        <select onchange="saveMatchPoint('${id}', ${h.number}, this.value)" class="text-[10px] font-bold uppercase tracking-wider border border-slate-300 rounded-lg px-2 py-2 w-24 shrink-0 bg-slate-50 hover:bg-slate-100 outline-none text-navy focus:ring-1 focus:ring-btgreen focus:border-btgreen transition">
+                        <select onchange="saveMatchPoint('${id}', ${h.number}, this.value)" class="text-[10px] font-bold uppercase tracking-wider border border-slate-300 rounded-lg px-2 py-2 w-24 shrink-0 bg-slate-50 hover:bg-slate-100 outline-none text-navy focus:ring-1 focus:ring-btgreen focus:border-btgreen transition mt-1">
                             <option value="">WINNER?</option>
                             <option value="A" ${selectedVal === 'A' ? 'selected' : ''}>${course.teamA}</option>
                             <option value="B" ${selectedVal === 'B' ? 'selected' : ''}>${course.teamB}</option>
